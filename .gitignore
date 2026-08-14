@@ -1,0 +1,14 @@
+# Data
+data/*
+!data/.gitkeep
+
+#JetBrains
+.idea/
+
+# Environment
+.venv/
+config.py
+
+# Python
+__pycache__/
+*.py[cod]
