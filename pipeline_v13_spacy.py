@@ -648,6 +648,8 @@ def extract_morphology_raw(text: str) -> Optional[str]:
 # SIZE EXTRACTION
 # ─────────────────────────────────────────────────────────────────
 def extract_size(text: str) -> str:
+    # SIZE CAN BE WRITTEN 3 DIMENSIONALLY, 2 DIMENSIONALLY, AS A RANGE OR AS
+    # A SINGLE MEASUREMENT, mm can also appear on either the first, second or last number
     # Range: "4 to 6 mm" or "4-6mm"
     m = re.search(r'(\d+(?:\.\d+)?)\s*(?:to|-)\s*(\d+(?:\.\d+)?)\s*(mm|cm)', text, re.I)
     if m:
@@ -1039,11 +1041,14 @@ def extract_difficulty_and_reason(note_clean: str) -> tuple[str, str]:
     if re.search(r'\bwithout difficulty\b|\bwith ease\b|\bperformed (?:easily|smoothly)\b', note_clean, re.I):
         return "No difficulty", "NA"
 
+    MOD = r'(?:some|mild|moderate|significant|considerable|substantial|extreme|great)'
+    ADV = r'(?:somewhat|mildly|moderately|very|unusually|extremely|significantly)'
+
     patterns = [
-        r'\bthe\s+colonoscopy\s+was\s+((?:somewhat|mildly|moderately|very|unusually)?\s*(?:technically\s+)?(?:difficult|complex)(?:\s+and\s+complex)?)(?:\s+(due to [^\.]+))?',
-        r'\bthe\s+colonoscopy\s+was\s+performed\s+with\s+((?:some\s+)?difficulty)(?:\s+(due to [^\.]+))?',
-        r'\bperformed\s+with\s+((?:some\s+)?difficulty)(?:\s+(due to [^\.]+))?',
-        r'\b(?:technically\s+)?((?:difficult|complex)(?:\s+and\s+complex)?)(?:\s+(due to [^\.]+))?',
+        rf'\bthe\s+colonoscopy\s+was\s+({ADV}?\s*(?:technically\s+)?(?:difficult|complex)\b(?:\s+and\s+complex)?)',
+        rf'\bthe\s+colonoscopy\s+was\s+performed\s+with\s+({MOD}?\s*difficulty)\b',
+        rf'\bperformed\s+with\s+({MOD}?\s*difficulty)\b',
+        rf'\b(?:technically\s+)?((?:difficult|complex)\b(?:\s+and\s+complex)?)',
     ]
     for pat in patterns:
         m = re.search(pat, note_clean, re.I)
