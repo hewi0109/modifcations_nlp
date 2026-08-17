@@ -101,6 +101,11 @@ BOWEL_PREP_QUALITY_VOCAB = [
     "Barely satistfactory", "Very good", "Mildly poor"
 ]
 
+POOR_PREP_QUALITY_VALUES = [
+    "poor", "inadequate", "unsatisfactory", "barely satisfactory",
+    "mildly poor",  "Barely satistfactory"
+]
+
 BOWEL_PREP_GIVEN_VOCAB = [
     "3L Colonlytely", "4L Colonlytely", "4L Colonlytely + Aperients",
     "5L Colonlytely", "5L Colonlytely + Aperients", "Moviprep",
@@ -266,8 +271,8 @@ class ClinicalSpacyEngine:
             "proximal transverse colon", "whole colon", "entire colon"
         ])
         add("MORPHOLOGY", [
-            "Paris classification Is", "Paris classification Ip", "type Is", "type Ip",
-            "type IIa", "type IIb", "type IIc", "type III", "type IIa+IIc",
+            "Paris classification Is", "Paris classification Ip", "Paris classificationIIa",
+            "type Is", "type Ip", "type IIa", "type IIb", "type IIc", "type III", "type IIa+IIc",
             "type IIc+IIa", "flat", "laterally spreading", "mass",
             "multi-lobulated", "pedunculated", "semi-pedunculated",
             "semi-sessile", "sessile"
@@ -613,12 +618,14 @@ def apply_procedure_finding_terms(proc: dict, note: str, no_endoscopy_report: bo
 MORPHOLOGY_RAW = [
     (re.compile(r'paris\s+(?:classification\s+)?Is\b|type\s+Is\b|protruding.*sessile', re.I), "type Is"),
     (re.compile(r'paris\s+(?:classification\s+)?Ip\b|type\s+Ip\b|protruding.*pedunculated', re.I), "type Ip"),
-    (re.compile(r'type\s+IIa\+IIc\b|IIa\+IIc', re.I), "type IIa+IIc"),
-    (re.compile(r'type\s+IIc\+IIa\b|IIc\+IIa', re.I), "type IIc+IIa"),
-    (re.compile(r'type\s+IIa\b|paris\s+IIa', re.I), "type IIa"),
-    (re.compile(r'type\s+IIb\b|paris\s+IIb', re.I), "type IIb"),
-    (re.compile(r'type\s+IIc\b|paris\s+IIc', re.I), "type IIc"),
-    (re.compile(r'type\s+III\b|paris\s+III', re.I), "type III"),
+
+    (re.compile(r'type\s+IIa\+IIc\b|paris\s+(?:classification\s+)?IIa\+IIc', re.I), "type IIa+IIc"),
+    (re.compile(r'type\s+IIc\+IIa\b|paris\s+(?:classification\s+)?IIc\+IIa', re.I), "type IIc+IIa"),
+    (re.compile(r'type\s+IIa\b|paris\s+(?:classification\s+)?IIa', re.I), "type IIa"),
+    (re.compile(r'type\s+IIb\b|paris\s+(?:classification\s+)?IIb', re.I), "type IIb"),
+    (re.compile(r'type\s+IIc\b|paris\s+(?:classification\s+)?IIc', re.I), "type IIc"),
+    (re.compile(r'type\s+III\b|paris\s+(?:classification\s+)?III', re.I), "type III"),
+
     (re.compile(r'\bsemi-?pedunculated\b', re.I), "semi-pedunculated"),
     (re.compile(r'\bsemi-?sessile\b', re.I), "semi-sessile"),
     (re.compile(r'\bmulti-?lobulated\b', re.I), "multi-lobulated"),
@@ -1063,7 +1070,7 @@ def extract_difficulty_and_reason(note_clean: str) -> tuple[str, str]:
     return "Not documented", "Not documented"
 
 
-def extract_incomplete_reason(note_clean: str, difficulty_reason: str) -> str:
+def extract_incomplete_reason(note_clean: str, difficulty_reason: str, prep_quality: str = "") -> str:
     """Prefer the documented reason for incompletion over the reached extent."""
     # Supervisor feedback 26.06.26: intubation extent is captured separately,
     # so Reason_incomplete should explain why completion failed.
@@ -1074,15 +1081,25 @@ def extract_incomplete_reason(note_clean: str, difficulty_reason: str) -> str:
     if re.search(r'\bthis\s+(?:is|was)\s+the\s+intended\s+extent\b', note_clean, re.I):
         reasons.append("Intended extent")
 
+    if str(prep_quality).strip().lower() in POOR_PREP_QUALITY_VALUES:
+        reasons.append("Poor Bowel Prep")
+
     specific_patterns = [
         r'\blumen\s+was\s+not\s+able\s+to\s+be\s+insufflated.*?(?=\.|\bThe quality\b|\bBowel preparation\b|\bFindings\b|$)',
         r'\bnot\s+able\s+to\s+be\s+insufflated.*?(?=\.|\bThe quality\b|\bBowel preparation\b|\bFindings\b|$)',
         r'\bcould\s+not\s+(?:be\s+)?(?:advanced|passed|completed).*?(?=\.|\bThe quality\b|\bBowel preparation\b|\bFindings\b|$)',
         r'\bunable\s+to\s+(?:advance|pass|complete|intubate).*?(?=\.|\bThe quality\b|\bBowel preparation\b|\bFindings\b|$)',
+        r'\baborted\s+due\s+to\s+.*?(?=\.|\)|\bThe quality\b|\bBowel preparation\b|\bFindings\b|$)',
+        r'\btolerated\s+the\s+procedure\s+poorly\s+due\s+to\s+.*?(?=\.|\)|\bThe quality\b|\bBowel preparation\b|\bFindings\b|$)',
+
     ]
     for pat in specific_patterns:
         m = re.search(pat, note_clean, re.I)
         if m:
+            matched = re.sub (
+                r'^\s*(?:aborted\s+due\s+to|tolerated\s+the\s+procedure\s+poorly\s+due\s+to)\s+',
+                '', m.group(0), flags=re.I
+            )
             reasons.append(_clean_reason_phrase(m.group(0)))
 
     deduped = []
@@ -1417,7 +1434,7 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
         reason_incomplete = "Not documented"
     else:
         completeness = "Incomplete"
-        reason_incomplete = extract_incomplete_reason(note_clean, difficulty_reason) or f"Reached {intubation} only"
+        reason_incomplete = extract_incomplete_reason(note_clean, difficulty_reason, prep_quality) or f"Reached {intubation} only"
 
     manual_curation = "No specimens collected" if impression_has_no_specimens_collected(note) else "No"
 
