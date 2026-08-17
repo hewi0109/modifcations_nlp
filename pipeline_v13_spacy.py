@@ -1045,17 +1045,18 @@ def extract_difficulty_and_reason(note_clean: str) -> tuple[str, str]:
     ADV = r'(?:somewhat|mildly|moderately|very|unusually|extremely|significantly)'
 
     patterns = [
-        rf'\bthe\s+colonoscopy\s+was\s+({ADV}?\s*(?:technically\s+)?(?:difficult|complex)\b(?:\s+and\s+complex)?)',
-        rf'\bthe\s+colonoscopy\s+was\s+performed\s+with\s+({MOD}?\s*difficulty)\b',
-        rf'\bperformed\s+with\s+({MOD}?\s*difficulty)\b',
-        rf'\b(?:technically\s+)?((?:difficult|complex)\b(?:\s+and\s+complex)?)',
+        rf'\bthe\s+colonoscopy\s+was\s+({ADV}?\s*(?:technically\s+)?(?:difficult|complex)\b(?:\s+and\s+complex)?)(?:\s+(due to [^\.]+))?',
+        rf'\bthe\s+colonoscopy\s+was\s+performed\s+with\s+({MOD}?\s*difficulty)\b(?:\s+(due to [^\.]+))?',
+        rf'\bperformed\s+with\s+({MOD}?\s*difficulty)\b(?:\s+(due to [^\.]+))?',
+        rf'\b(?:technically\s+)?((?:difficult|complex)\b(?:\s+and\s+complex)?)(?:\s+(due to [^\.]+))?',
     ]
     for pat in patterns:
         m = re.search(pat, note_clean, re.I)
         if not m:
             continue
         difficulty = _clean_reason_phrase(m.group(1)).lower()
-        reason = _clean_reason_phrase(m.group(2)) if m.lastindex and m.group(2) else "Not documented"
+        groups = m.groups()
+        reason = _clean_reason_phrase(groups[1]) if len(groups) > 1 and groups[1] else "Not documented"
         if difficulty:
             return difficulty, reason
 
@@ -1069,6 +1070,9 @@ def extract_incomplete_reason(note_clean: str, difficulty_reason: str) -> str:
     reasons = []
     if difficulty_reason and difficulty_reason not in {"Not documented", "NA"}:
         reasons.append(re.sub(r'^\s*due to\s+', '', difficulty_reason, flags=re.I).strip())
+
+    if re.search(r'\bthis\s+(?:is|was)\s+the\s+intended\s+extent\b', note_clean, re.I):
+        reasons.append("Intended extent")
 
     specific_patterns = [
         r'\blumen\s+was\s+not\s+able\s+to\s+be\s+insufflated.*?(?=\.|\bThe quality\b|\bBowel preparation\b|\bFindings\b|$)',
@@ -3265,8 +3269,8 @@ def _canonicalise_batch_columns(df):
         "CMBSMain": "procedure_id",
         "startDate": "procedure_date",
         "Hospital": "procedure_location",
-        "ColonocopyReport": "endoscopy_report_text",
-        "PathResult": "pathology_report_text",
+        "colonoscopy": "endoscopy_report_text",
+        "pathology": "pathology_report_text",
         "procedureType": "procedure_type",
         "ProcedureType": "procedure_type",
         "Procedure_Type": "procedure_type",
@@ -3292,6 +3296,9 @@ def _canonicalise_batch_columns(df):
         "pathresult": "pathology_report_text",
         "procedurefindingid": "procedure_finding_id",
         "procedurefindingsid": "procedure_finding_id",
+        "colonoscopy": "endoscopy_report_text",
+        "pathology": "pathology_report_text",
+        "pathologyreport": "pathology_report_text"
     }
     renamed = {}
     for c in df.columns:
@@ -3569,9 +3576,14 @@ def run_batch(
     for source_sheet, df in sheets.items():
         df.columns = df.columns.str.strip()
         df = _canonicalise_batch_columns(df)
-        for optional_col in ["procedure_type", "procedure_finding_id"]:
+        for optional_col in ["procedure_type", "procedure_finding_id", "procedure_id", "procedure_date", "procedure_location"]:
             if optional_col not in df.columns:
                 df[optional_col] = ""
+        if (df["procedure_id"] == "").all():
+            df["procedure_id"] = [
+                f"PROC-{_clean_identifier(reg)} - {i}" if _clean_identifier(reg) else f"PROC-ROW-{i}"
+                for i, reg in enumerate(df["registration_id"], start = 1)
+            ]
         missing = [c for c in required_cols if c not in df.columns]
         if missing:
             print(f"Sheet {source_sheet}: skipped - missing required columns {missing}")
@@ -3674,17 +3686,18 @@ if __name__ == "__main__":
     # help/default output should not create a workbook labelled as v11.
     parser = argparse.ArgumentParser(description="v12 spaCy-enhanced colonoscopy/pathology polyp and indication extraction pipeline")
     parser.add_argument(
-        "--data",
-        default="/Users/muktarahmed/Downloads/Muktar.xlsx",
-        help="Input workbook path, defaulting to the new Muktar.xlsx dataset"
+        "--input",
+        default="data/testing input.xlsx",
+        help="Input workbook path, defaulting to the input dataset"
     )
     parser.add_argument(
         "--output",
-        default="/Users/muktarahmed/Documents/Claude/Projects/NLP/nlp_extraction_spacy_v12_2024.xlsx",
+        default="data/ testing NLP output.xlsx",
         help="Output workbook path"
     )
-    parser.add_argument("--sheet", default="vw_scoop_procedures", help="Procedure sheet to process")
-    parser.add_argument("--findings-sheet", default="vw_scoop_procedure_findings", help="Sheet containing procedure_finding_id")
+    parser.add_argument("--sheet", default="Sheet1", help="Procedure sheet to process")
+    parser.add_argument("--findings-sheet", default=None, help="Sheet containing procedure_finding_id")
     parser.add_argument("--year", type=int, default=2024, help="Procedure year to process")
     args = parser.parse_args()
     run_batch(args.input, args.output, args.sheet, args.findings_sheet, args.year)
+
