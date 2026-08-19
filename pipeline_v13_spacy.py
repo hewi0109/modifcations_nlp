@@ -17,6 +17,7 @@ from typing import Optional
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from datetime import date
 
 try:
     from rapidfuzz import fuzz, process
@@ -914,6 +915,40 @@ def extract_procedure_room(note: str) -> str:
     )
     return _clean_report_field(m.group(1)) if m else "Not documented"
 
+# -----------------------------------------------------------------
+# REPORT DATE EXTRACTION
+# -----------------------------------------------------------------
+PROCEDURE_DATE_RE = re.compile(
+    r'\bProcedure\s+Date\s*:?\s*(\d{1,2})\s*/\s*(\d{1,2})\s*/\s*(\d{4})\b',
+    re.I
+)
+
+def extract_report_date(note: str) -> str:
+    """Extract 'Procedure Date: D/M/YYYY' from the report header
+
+    Returns IDO YYYY-MM-DD so the column sort correctly into excel and
+    compares cleanly afainst the source procedure_date"""
+    if is_missing_report_text(note):
+        return "No Endoscopy report"
+
+    text = re.sub(r'_?x000D_|_?x000A_|\r', '\n', str(note), flags=re.I)
+    m= PROCEDURE_DATE_RE.search(text)
+    if not m:
+        return "Not documented"
+
+    day, month, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    try: return date(year, month, day).isoformat()
+    except ValueError:
+        return "Not documented"
+
+def resolve_procedure_date(report_date: str, source_date) -> str:
+    """Use the date printed in the report; fall back to the source column"""
+    if re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(report_date or "")):
+        return report_date
+    source=str(source_date or "").strip()
+    return source if source else (report_date or "Not Documented")
+
+
 
 def extract_medication(note: str) -> str:
     text_for_prefix = re.sub(r'_?x000D_|_?x000A_|\r|\n', ' ', str(note or ""), flags=re.I)
@@ -1144,6 +1179,7 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
     note_clean = re.sub(r'\s+', ' ', note_clean).strip()
     procedure_provider = extract_procedure_provider(note)
     procedure_room = extract_procedure_room(note)
+    report_date = extract_report_date(note)
     medication = extract_medication(note)
     instrument_name = extract_instrument_name(note)
 
@@ -1452,6 +1488,7 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
         "withdrawal_time": withdrawal_time,
         "manual_curation": manual_curation,
         "procedure_room": procedure_room,
+        "report_date": report_date,
         "procedure_provider": procedure_provider,
         "instrument_name": instrument_name,
         "medication": medication,
@@ -3629,7 +3666,7 @@ def run_batch(
             proc["procedure_id"] = procedure_id
             proc["procedure_finding_id"] = procedure_finding_id
             proc["registration_id"] = registration_id
-            proc["procedure_date"] = procedure_date
+            proc["procedure_date"] = resolve_procedure_date(proc.get("report_date", ""), procedure_date)
             proc["procedure_type"] = procedure_type
             proc["procedure_location"] = procedure_location
             proc["pathology_report_text"] = path
