@@ -12,3 +12,5 @@ config.py
 # Python
 __pycache__/
 *.py[cod]
+
+compare_workbooks.py
