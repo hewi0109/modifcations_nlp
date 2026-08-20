@@ -234,12 +234,16 @@ class ClinicalSpacyEngine:
     en_core_web_sm before the pipeline can run.
     """
     def __init__(self):
-        if spacy is None:
+        import os
+        if spacy is None or os.environ.get("DISABLE_SPACY") == "1":
             self.available = False
             self.nlp = None
             self.matcher = None
             self.phrase_matcher = None
             return
+        ## to run with spacy off # Run 1 -- spaCy forced OFF
+        ## $env:DISABLE_SPACY="1"
+        ## python pipeline_v13_spacy.py --output "data/output_no_spacy.xlsx"
 
         self.available = True
         self.nlp = spacy.blank("en")
@@ -273,8 +277,9 @@ class ClinicalSpacyEngine:
         ])
         add("MORPHOLOGY", [
             "Paris classification Is", "Paris classification Ip", "Paris classificationIIa",
-            "type Is", "type Ip", "type IIa", "type IIb", "type IIc", "type III", "type IIa+IIc",
-            "type IIc+IIa", "flat", "laterally spreading", "mass",
+            "Paris 0-IIa+c", "Paris 0-IIa+Is", "Paris 0-Is+IIa", "Paris 0-IIa+Ib", "Paris 0-Ib+IIa",
+            "Paris 0-Is+IIc", "Paris 0-IIc+Is", "type Is", "type Ip", "type IIa", "type IIb", "type IIc",
+            "type III", "type IIa+IIc", "type IIc+IIa", "flat", "laterally spreading", "mass",
             "multi-lobulated", "pedunculated", "semi-pedunculated",
             "semi-sessile", "sessile"
         ])
