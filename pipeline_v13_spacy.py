@@ -137,7 +137,8 @@ FINDING_MORPHOLOGY_VOCAB = [
     "sessile", "flat", "pedunculated", "semi-pedunculated", "semi-sessile",
     "sessile serrated", "multi-lobulated", "laterally spreading", "multiple (sessile)", "mass",
     "type Ip", "type Is", "type IIa", "type IIb", "type IIc", "type III",
-    "type IIc+IIa", "type IIa+IIc"
+    "type IIc+IIa", "type IIa+IIc", "type IIc+Is", "type Is+IIc", "type Ib+IIa",
+    "type IIa+Ib", "type Is+IIa", "type IIa+Is", "type IIa+c"
 ]
 
 INTERVENTION_VOCAB = [
@@ -617,15 +618,24 @@ def apply_procedure_finding_terms(proc: dict, note: str, no_endoscopy_report: bo
 # MORPHOLOGY EXTRACTION
 # ─────────────────────────────────────────────────────────────────
 MORPHOLOGY_RAW = [
-    (re.compile(r'paris\s+(?:classification\s+)?Is\b|type\s+Is\b|protruding.*sessile', re.I), "type Is"),
-    (re.compile(r'paris\s+(?:classification\s+)?Ip\b|type\s+Ip\b|protruding.*pedunculated', re.I), "type Ip"),
+    ## changes made to each row as the "Paris-0" needs to be accounted for
+    (re.compile(r'type\s+IIa\+IIc\b|paris\s+(?:classification\s+)?IIa\+IIc\b|IIa\+IIc', re.I), "type IIa+IIc"),
+    (re.compile(r'type\s+IIc\+IIa\b|paris\s+(?:classification\s+)?IIc\+IIa\b|IIc\+IIa', re.I), "type IIc+IIa"),
 
-    (re.compile(r'type\s+IIa\+IIc\b|paris\s+(?:classification\s+)?IIa\+IIc', re.I), "type IIa+IIc"),
-    (re.compile(r'type\s+IIc\+IIa\b|paris\s+(?:classification\s+)?IIc\+IIa', re.I), "type IIc+IIa"),
-    (re.compile(r'type\s+IIa\b|paris\s+(?:classification\s+)?IIa', re.I), "type IIa"),
-    (re.compile(r'type\s+IIb\b|paris\s+(?:classification\s+)?IIb', re.I), "type IIb"),
-    (re.compile(r'type\s+IIc\b|paris\s+(?:classification\s+)?IIc', re.I), "type IIc"),
-    (re.compile(r'type\s+III\b|paris\s+(?:classification\s+)?III', re.I), "type III"),
+    (re.compile(r'paris\s+0-IIa\+c\b', re.I), "type IIa+c"),
+    (re.compile(r'paris\s+0-IIa\+Is\b', re.I), "type IIa+Is"),
+    (re.compile(r'paris\s+0-Is\+IIa\b', re.I), "type Is+IIa"),
+    (re.compile(r'paris\s+0-IIa\+Ib\b', re.I), "type IIa+Ib"),
+    (re.compile(r'paris\s+0-Ib\+IIa\b', re.I), "type Ib+IIa"),
+    (re.compile(r'paris\s+0-Is\+IIc\b', re.I), "type Is+IIc"),
+    (re.compile(r'paris\s+0-IIc\+Is\b', re.I), "type IIc+Is"),
+
+    (re.compile(r'paris\s+(?:classification\s+)?(?:0[-\s]+)?Is\b|type\s+(?:0[-\s]+)?Is\b|protruding.*sessile', re.I), "type Is"),
+    (re.compile(r'paris\s+(?:classification\s+)?(?:0[-\s]+)?Ip\b|type\s+(?:0[-\s]+)?Ip\b|protruding.*pedunculated', re.I), "type Ip"),
+    (re.compile(r'type\s+(?:0[-\s]+)?IIa\b|paris\s+(?:classification\s+)?(?:0[-\s]+)?IIa\b', re.I), "type IIa"),
+    (re.compile(r'type\s+(?:0[-\s]+)?IIb\b|paris\s+(?:classification\s+)?(?:0[-\s]+)?IIb\b', re.I), "type IIb"),
+    (re.compile(r'type\s+(?:0[-\s]+)?IIc\b|paris\s+(?:classification\s+)?(?:0[-\s]+)?IIc\b', re.I), "type IIc"),
+    (re.compile(r'type\s+(?:0[-\s]+)?III\b|paris\s+(?:classification\s+)?(?:0[-\s]+)?III\b', re.I), "type III"),
 
     (re.compile(r'\bsemi-?pedunculated\b', re.I), "semi-pedunculated"),
     (re.compile(r'\bsemi-?sessile\b', re.I), "semi-sessile"),
