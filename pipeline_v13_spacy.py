@@ -93,7 +93,7 @@ show features of hyperplastic polyps. No high-grade dysplasia or invasive lesion
 INTUBATION_DISTANCE_VOCAB = [
     "Anastomosis", "Ascending Colon", "Caecum", "Descending Colon",
     "Hepatic Flexure", "Not Reported", "Rectosigmoid Junction", "Rectum", "Sigmoid Colon",
-    "Splenic Flexure", "Terminal Ileum", "Transverse Colon"
+    "Splenic Flexure", "Terminal Ileum", "Transverse Colon", "Surgical Stoma"
 ]
 
 BOWEL_PREP_QUALITY_VOCAB = [
@@ -515,6 +515,7 @@ SITE_RAW_PATTERNS = [
     (re.compile(r'appendiceal\s+orifice', re.I), "Appendiceal orifice"),
     # Entire colon
     (re.compile(r'entire\s+colon|whole\s+colon|pan.?colon', re.I), "Colon - multiple polyps"),
+    (re.compile(r'(?:anastomosis|anastomotic)\s+polyp', re.I), "Anastomosis")
 ]
 
 def extract_site_raw(text: str) -> Optional[str]:
@@ -1242,11 +1243,11 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
         (r'\b(?:advanced|passed|reached|intubated|inserted|insered).{0,50}\b(?:in(?:to|side)?|within)\s+(?:the\s+)?ileum\b', "Terminal Ileum"),
         (r'\b(?:advanced|passed|reached|intubated|inserted|insered).{0,50}\b(?:the\s+)?ileum\b', "Terminal Ileum"),
 
-        # Anastomosis
+        # Anastomosis & Surgical Stoma
         (r'\b(?:advanced|passed|reached|intubated|inserted).{0,50}\b(?:ileocolonic|ileo-colonic|colonic)?\s*anastomosis\b', "Anastomosis"),
         (r'\bextent reached(?: was|:)? (?:the )?(?:ileocolonic|ileo-colonic|colonic)?\s*anastomosis\b', "Anastomosis"),
         (r'\bcould only be advanced to the (?:ileocolonic|ileo-colonic|colonic)?\s*anastomosis\b', "Anastomosis"),
-        (r'\b(?:advanced|passed|reached|intubated|inserted|insered).{0,50}\bsurgical stoma\b', "Anastomosis"),
+        (r'\b(?:advanced|passed|reached|intubated|inserted|insered).{0,50}\bsurgical stoma\b', "Surgical Stoma"),
 
         # Caecum
         (r'\b(?:advanced|passed|reached|intubated|inserted).{0,50}\bcaecum\b', "Caecum"),
@@ -1477,7 +1478,7 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
     complications = extract_complications_reported(note)
 
      # ── Procedure completeness ───────────────────────────────────
-    if intubation in ["Caecum", "Terminal Ileum", "Anastomosis"]:
+    if intubation in ["Caecum", "Terminal Ileum", "Anastomosis", "Surgical Stoma"]:
         completeness = "Complete"
         reason_incomplete = "N/A"
     elif intubation == "Not Reported":
@@ -1485,7 +1486,7 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
         reason_incomplete = "Not documented"
     else:
         completeness = "Incomplete"
-        reason_incomplete = extract_incomplete_reason(note_clean, difficulty_reason, prep_quality) or f"Reached {intubation} only"
+        reason_incomplete = extract_incomplete_reason(note_clean, difficulty_reason, prep_quality) or f"Manual Curation Needed"
 
     manual_curation = "No specimens collected" if impression_has_no_specimens_collected(note) else "No"
 
@@ -3756,7 +3757,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="v12 spaCy-enhanced colonoscopy/pathology polyp and indication extraction pipeline")
     parser.add_argument(
         "--input",
-        default="data/testing input.xlsx",
+        default="data/testing_input_anastomosis.xlsx",
         help="Input workbook path, defaulting to the input dataset"
     )
     parser.add_argument(
