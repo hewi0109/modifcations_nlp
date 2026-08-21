@@ -515,6 +515,7 @@ SITE_RAW_PATTERNS = [
     (re.compile(r'appendiceal\s+orifice', re.I), "Appendiceal orifice"),
     # Entire colon
     (re.compile(r'entire\s+colon|whole\s+colon|pan.?colon', re.I), "Colon - multiple polyps"),
+    (re.compile(r'(?:anastomosis|anastomotic)\s+polyp', re.I), "Anastomosis")
 ]
 
 def extract_site_raw(text: str) -> Optional[str]:
@@ -3756,7 +3757,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="v12 spaCy-enhanced colonoscopy/pathology polyp and indication extraction pipeline")
     parser.add_argument(
         "--input",
-        default="data/testing input.xlsx",
+        default="data/testing_input_anastomosis.xlsx",
         help="Input workbook path, defaulting to the input dataset"
     )
     parser.add_argument(
