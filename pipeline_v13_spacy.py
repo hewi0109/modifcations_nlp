@@ -1470,7 +1470,35 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
     difficulty, difficulty_reason = extract_difficulty_and_reason(note_clean)
 
     # ── Tolerated ────────────────────────────────────────────────
-    tolerated = "Yes" if re.search(r'\btolerated the procedure well\b', note_clean, re.I) else "Not documented"
+    if re.search(
+            r'\b(?:patient\s+)?tolerated\s+the\s+procedure\s+'
+            r'(?:poorly|with\s+(?:some\s+apparent\s+)?discomfort|with\s+difficulty)\b',
+            note_clean,
+            re.I
+    ):
+        tolerated = "Poorly tolerated"
+
+    elif re.search(
+            r'\b(?:patient\s+)?tolerated\s+the\s+procedure'
+            r'(?:\s+(?:fairly\s+well|reasonably\s+well|adequately|fairly))?'
+            r'(?:\s*[\.,;:]?\s+but\b)',
+            note_clean,
+            re.I
+    ):
+        tolerated = "Poorly tolerated"
+
+    elif re.search(
+            r'\b(?:patient\s+)?tolerated\s+the\s+procedure'
+            r'(?:\s+(?:fairly\s+well|reasonably\s+well|adequately|fairly))?'
+            r'\s*[\.,;:]?(?:\s*$|\s+(?=[\.,;]))',
+            note_clean,
+            re.I
+    ):
+        tolerated = "Tolerated"
+
+    else:
+        tolerated = "Not documented"
+
 
     # ── Complications ────────────────────────────────────────────
     # Supervisor feedback 19.06.26: use the reported Complications field
