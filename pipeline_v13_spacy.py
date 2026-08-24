@@ -1470,29 +1470,28 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
     difficulty, difficulty_reason = extract_difficulty_and_reason(note_clean)
 
     # ── Tolerated ────────────────────────────────────────────────
+
     if re.search(
-            r'\b(?:patient\s+)?tolerated\s+the\s+procedure\s+'
-            r'(?:poorly|with\s+(?:some\s+apparent\s+)?discomfort|with\s+difficulty)\b',
+            r"\b(?:patient\s+)?tolerated\s+the\s+procedure\s+"
+            r"(?:poorly|with\s+(?:some\s+apparent\s+)?discomfort|with\s+difficulty)\b",
             note_clean,
-            re.I
+            re.I,
     ):
         tolerated = "Poorly tolerated"
 
     elif re.search(
-            r'\b(?:patient\s+)?tolerated\s+the\s+procedure'
-            r'(?:\s+(?:fairly\s+well|reasonably\s+well|adequately|fairly))?'
-            r'(?:\s*[\.,;:]?\s+but\b)',
+            r"\b(?:patient\s+)?tolerated\s+the\s+procedure\s+"
+            r"(?:fairly\s+well|reasonably\s+well|adequately|fairly)\s*[\.,;:]?\s+but\b",
             note_clean,
-            re.I
+            re.I,
     ):
         tolerated = "Poorly tolerated"
 
     elif re.search(
-            r'\b(?:patient\s+)?tolerated\s+the\s+procedure'
-            r'(?:\s+(?:fairly\s+well|reasonably\s+well|adequately|fairly))?'
-            r'\s*[\.,;:]?(?:\s*$|\s+(?=[\.,;]))',
+            r"\b(?:patient\s+)?tolerated\s+the\s+procedure"
+            r"(?:\s+(?:well|fairly\s+well|reasonably\s+well|adequately|fairly))?\b",
             note_clean,
-            re.I
+            re.I,
     ):
         tolerated = "Tolerated"
 
@@ -3785,7 +3784,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="v12 spaCy-enhanced colonoscopy/pathology polyp and indication extraction pipeline")
     parser.add_argument(
         "--input",
-        default="data/testing_input_anastomosis.xlsx",
+        default="data/SALHN colonoscopies and pathology 2020-2025.xlsx",
         help="Input workbook path, defaulting to the input dataset"
     )
     parser.add_argument(
