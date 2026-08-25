@@ -516,6 +516,7 @@ SITE_RAW_PATTERNS = [
     (re.compile(r'appendiceal\s+orifice', re.I), "Appendiceal orifice"),
     # Entire colon
     (re.compile(r'entire\s+colon|whole\s+colon|pan.?colon', re.I), "Colon - multiple polyps"),
+    (re.compile(r'(?:anastomosis|anastomotic)\s+polyp', re.I), "Anastomosis")
 ]
 
 def extract_site_raw(text: str) -> Optional[str]:
