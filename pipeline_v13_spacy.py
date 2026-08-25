@@ -465,6 +465,7 @@ SITE_RAW_PATTERNS = [
     (re.compile(r'distal[-\s]+transverse(?:\s+colon)?(?:\s+(?:polyp|biopsy|mass|lesion))?', re.I), "Distal transverse colon"),
     (re.compile(r'mid[-\s]+transverse(?:\s+colon)?(?:\s+(?:polyp|biopsy|mass|lesion))?', re.I), "Mid transverse colon"),
     (re.compile(r'proximal[-\s]+transverse(?:\s+colon)?(?:\s+(?:polyp|biopsy|mass|lesion))?', re.I), "Proximal transverse colon"),
+    (re.compile(r'\banastomo(?:sis|tic|sed)?(?:\s+(?:polyp|biopsy|mass|lesion))?', re.I), "Anastomosis"),
     # Rectum / rectal — before rectosigmoid and sigmoid
     # Also handle distance-from-anus: <20cm = rectum, 20-40cm = sigmoid
     (re.compile(r'upper[-\s]+rect(?:um|al)', re.I), "Upper rectum"),
