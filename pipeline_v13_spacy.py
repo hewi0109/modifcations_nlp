@@ -1481,7 +1481,7 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
 
     elif re.search(
             r"\b(?:patient\s+)?tolerated\s+the\s+procedure\s+"
-            r"(?:fairly\s+well|reasonably\s+well|adequately|fairly)\s*[\.,;:]?\s+but\b",
+            r"(?:fairly\s+well|reasonably\s+well|adequately|fairly)\s*[,;:]?\s+but\b",
             note_clean,
             re.I,
     ):
@@ -1913,7 +1913,7 @@ DIAG_PATTERNS = [
         r'colonic\s+mucosa\s+within\s+normal\s+limits|'
         r'mild\s+architectural\s+distortion|'
         r'biopsy\s*:\s*normal\b|'
-        r'(?:^|\:\s*)normal\.?\s*(?:$|\s)',
+        r'(?:^|\s*)normal\.?\s*(?:$|\s)',
         re.I), "Normal tissue"),
 ]
 
