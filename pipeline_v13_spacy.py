@@ -18,6 +18,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import date
+import pandas as pd
 
 try:
     from rapidfuzz import fuzz, process
@@ -3408,7 +3409,6 @@ def _canonicalise_batch_columns(df):
 
 def _clean_identifier(value) -> str:
     """Keep Excel numeric IDs stable as strings without trailing .0."""
-    import pandas as pd
 
     if pd.isna(value):
         return ""
@@ -3565,8 +3565,6 @@ def prepare_muktar_2024_dataframe(
     Multiple source finding IDs for the same procedure are kept as a semicolon-
     separated list to avoid running the same endoscopy/pathology report repeatedly.
     """
-    import pandas as pd
-
     proc_df = pd.read_excel(df_path, sheet_name=procedures_sheet)
     finding_df = pd.read_excel(df_path, sheet_name=findings_sheet)
 
@@ -3638,7 +3636,6 @@ def run_batch(
     year: int = 2024,
 ):
     """Run pipeline on a batch Excel file using real source columns."""
-    import pandas as pd
 
     source_finding_lookup = {}
     if findings_sheet:
