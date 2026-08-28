@@ -18,6 +18,10 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import date
+from fastapi import FastAPI, UploadFile, Query
+from fastapi.responses import StreamingResponse
+import pandas as pd
+import io
 
 try:
     from rapidfuzz import fuzz, process
@@ -3630,14 +3634,13 @@ def prepare_muktar_2024_dataframe(
     return prepared
 
 
-def run_batch(
+def run_batch_data(
     df_path: str,
-    output_path: str,
     sheet_name: Optional[str] = "vw_scoop_procedures",
     findings_sheet: Optional[str] = "vw_scoop_procedure_findings",
     year: int = 2024,
 ):
-    """Run pipeline on a batch Excel file using real source columns."""
+    """Run pipeline on a batch Excel file and return extracted rows (no Excel write)."""
     import pandas as pd
 
     source_finding_lookup = {}
@@ -3775,8 +3778,25 @@ def run_batch(
                 f"{len(finding_rows)} finding rows, {needs_curation} flagged"
             )
 
-    build_excel_multi(all_proc_rows, all_finding_rows, output_path, all_indication_rows)
     print(f"\nTotal: {len(all_proc_rows)} procedures, {len(all_finding_rows)} findings, {len(all_indication_rows)} indications")
+
+    return all_proc_rows, all_finding_rows, all_indication_rows
+
+
+def run_batch(
+    df_path: str,
+    output_path: str,
+    sheet_name: Optional[str] = "vw_scoop_procedures",
+    findings_sheet: Optional[str] = "vw_scoop_procedure_findings",
+    year: int = 2024,
+):
+    """CLI entry point: run the pipeline and write the Excel workbook."""
+    all_proc_rows, all_finding_rows, all_indication_rows = run_batch_data(
+        df_path, sheet_name, findings_sheet, year
+    )
+    build_excel_multi(all_proc_rows, all_finding_rows, output_path, all_indication_rows)
+    return all_proc_rows, all_finding_rows, all_indication_rows
+
 
 if __name__ == "__main__":
     # Supervisor feedback 03.07.26: this file is the v12 delivery, so the CLI
@@ -3784,7 +3804,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="v12 spaCy-enhanced colonoscopy/pathology polyp and indication extraction pipeline")
     parser.add_argument(
         "--input",
-        default="data/SALHN colonoscopies and pathology 2020-2025.xlsx",
+        default="data/Test input.xlsx",
         help="Input workbook path, defaulting to the input dataset"
     )
     parser.add_argument(
@@ -3798,3 +3818,36 @@ if __name__ == "__main__":
     args = parser.parse_args()
     run_batch(args.input, args.output, args.sheet, args.findings_sheet, args.year)
 
+import tempfile, os
+
+app = FastAPI()
+
+@app.post("/extract")
+async def extract(
+    file: UploadFile,
+    format: str = Query("json", enum=["json", "csv"]),
+    sheet_name: str = Query(None),
+    findings_sheet: str = Query(None),
+    year: int = Query(2024),
+):
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    proc_rows, finding_rows, indication_rows = run_batch_data(
+        tmp_path, sheet_name, findings_sheet, year
+    )
+    os.remove(tmp_path)
+    ...
+
+    if format == "csv":
+        # only build workbook if csv specified
+        output_path = tmp_path.replace(".xlsx", "_output.xlsx")
+        build_excel_multi(proc_rows, finding_rows, output_path, indication_rows)
+        return StreamingResponse(open(output_path, "rb"), media_type="application/octet-stream")
+
+    return {
+        "procedures": proc_rows,
+        "findings": finding_rows,
+        "indications": indication_rows,
+    }
