@@ -18,7 +18,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import date
-import pandas as pd
 from fastapi import FastAPI, UploadFile, Query
 from fastapi.responses import StreamingResponse
 import pandas as pd
