@@ -204,6 +204,13 @@ DIAGNOSIS_SEVERITY = {
     "NLP unable to classify pathology clearly": 2,
     "Normal tissue": 1,
     "Granulation tissue": 1,
+    "Crohn's colitis": 4,
+    "Ulcerative colitis": 4,
+    "Indeterminate colitis": 4,
+    "Quiescent colitis": 2,
+    "Colitis": 4,
+    "Pouchitis": 3,
+    "Proctitis": 3,
 }
 
 DYSPLASIA_SEVERITY = {
@@ -475,7 +482,7 @@ SITE_RAW_PATTERNS = [
     (re.compile(r'upper[-\s]+rect(?:um|al)', re.I), "Upper rectum"),
     (re.compile(r'mid[-\s]+rect(?:um|al)', re.I), "Mid rectum"),
     (re.compile(r'lower rectum|distal[-\s]+rect(?:um|al)', re.I), "Distal rectum"),
-    (re.compile(r'rectal\s+(?:colon["\']?\s+)?(?:polyp|biopsy|mass)|rectum', re.I), "Rectum"),
+    (re.compile(r'rectal\s+(?:colon["\']?\s+)?(?:polyp|biopsy|mass|mucosa)|\brectum\b|\brectal\b', re.I), "Rectum"),
     (re.compile(r'\b(?:[1-9]|1[0-9])\s*cm\s+(?:proximal\s+to|from)\s+(?:the\s+)?anus', re.I), "Rectum"),
     (re.compile(r'\b(?:2[0-9]|3[0-9]|40)\s*cm\s+(?:proximal\s+to|from)\s+(?:the\s+)?anus', re.I), "Sigmoid colon"),
     # Rectosigmoid junction — before sigmoid
@@ -501,7 +508,7 @@ SITE_RAW_PATTERNS = [
     # Caecum — including "caecal biopsy/polyp", "cacum" (sic)
     (re.compile(r'cae?c(?:al|um)\s*(?:polyp|biopsy|mass|lesion)?|cacum', re.I), "Caecum"),
     # Terminal ileum
-    (re.compile(r'terminal\s+ileum', re.I), "Terminal Ileum"),
+    (re.compile(r'terminal\s+ile(?:um|al)', re.I), "Terminal Ileum"),
     # Small bowel — before ileum
     (re.compile(r'small\s+bowel\s+(?:polyp|biopsy)|small\s+bowel', re.I), "Small bowel biopsy"),
     (re.compile(r'\bileum\b', re.I), "Ileum"),
@@ -752,6 +759,9 @@ INTERVENTION_RAW = [
     (re.compile(r'not\s+excised|not\s+removed|left\s+in\s+situ', re.I), "Not excised"),
     (re.compile(r'\bsnare\b', re.I), "Cold snare"),   # fallback
     (re.compile(r'\bbiops(?:y|ied)\b', re.I), "Biopsy only"),
+    (re.compile(r'cold\s+forceps', re.I), "Cold forceps"),
+    (re.compile(r'hot\s+forceps', re.I), "Hot forceps"),
+
 ]
 
 def extract_intervention_raw(text: str) -> str:
@@ -1919,7 +1929,7 @@ DIAG_PATTERNS = [
         r'biopsy\s*:\s*normal\b|'
         r'(?:^|\s*)normal\.?\s*(?:$|\s)',
         re.I), "Normal tissue"),
-]
+        ]
 
 DYSPLASIA_PATTERNS = [
     # Adenocarcinoma-level — most specific first
@@ -1959,6 +1969,8 @@ def clean_clinical_text(text: str) -> str:
     text = re.sub(r'_?x000D_|_?x000A_', ' ', text, flags=re.I)
     text = re.sub(r'\r|\n|\t', ' ', text)
     text = re.sub(r'[\u2010-\u2015]', '-', text)  # normalise dash variants
+    text = re.sub(r'[\u2018\u2019\u02BC]', "'", text)  # normalise curly/smart apostrophes
+    text = re.sub(r'[\u201C\u201D]', '"', text)  # normalise curly quotation marks
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -2042,8 +2054,42 @@ def fuzzy_phrase_present(text: str, phrase: str, threshold: int = 90) -> bool:
         best = max(best, SequenceMatcher(None, phrase_l, text_l[i:i + window]).ratio())
     return best * 100 >= threshold
 
+COLITIS_FAMILY_PATTERNS = [
+    (re.compile(r"crohn'?s\s+(?:disease|colitis)|crohn'?s\b", re.I), "Crohn's colitis"),
+    (re.compile(r'\bulcerative\s+colitis\b', re.I), "Ulcerative colitis"),
+    (re.compile(r'\bindeterminate\s+colitis\b', re.I), "Indeterminate colitis"),
+    (re.compile(r'\bquiescent\s+colitis\b', re.I), "Quiescent colitis"),
+    (re.compile(r'\bpouchitis\b', re.I), "Pouchitis"),
+    (re.compile(r'\bproctitis\b', re.I), "Proctitis"),
+    (re.compile(r'\bcolitis\b', re.I), "Colitis"),
+]
+
+
+def colitis_family_diagnosis(text: str) -> str:
+    """Match colitis-family diagnoses with sentence-level negation awareness.
+
+    Bug fix: these patterns previously lived in DIAG_PATTERNS and were matched
+    with a blind pat.search(), which doesn't check for negation. Text like
+    "no features to suggest underlying Crohn's disease" matched just as
+    readily as an actual positive mention. This checks each candidate match's
+    containing sentence against the existing NEGATION_RE (already used
+    elsewhere in the file for endoscopy findings) and only accepts the match
+    if that sentence isn't negated.
+    """
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    for pat, label in COLITIS_FAMILY_PATTERNS:
+        for sentence in sentences:
+            if pat.search(sentence) and not NEGATION_RE.search(sentence):
+                return label
+    return ""
+
+
 def extract_diagnosis(text: str) -> str:
     t = clean_clinical_text(text)
+
+    colitis_label = colitis_family_diagnosis(t)
+    if colitis_label:
+        return colitis_label
 
     # First use exact/regex rules. These remain the safest when the phrase is clear.
     for pat, label in DIAG_PATTERNS:
@@ -2125,6 +2171,9 @@ def extract_diagnosis_groups(text: str) -> list[str]:
     """Return all distinct diagnosis groups explicitly present in a specimen."""
     t = clean_clinical_text(text)
     labels = []
+    colitis_label = colitis_family_diagnosis(t)
+    if colitis_label:
+        labels.append(colitis_label)
     for pat, label in DIAG_PATTERNS:
         if pat.search(t) and label not in labels:
             labels.append(label)
@@ -2141,21 +2190,59 @@ def extract_microscopic_specimens(path_note: str) -> list[PathologySpecimen]:
     lines (e.g. "1 & 2..." and "3 & 4...") but a clean microscopic section with
     each specimen described line-by-line. In those cases, use microscopic rows as
     the verified specimen source and do not also count the diagnosis rows.
+
+    Bug fix: reports can contain more than one "Microscopic" header — a
+    grossing/specimen list (measurements, cassette codes, no diagnosis) followed
+    by the real diagnostic narrative, sometimes followed by an addendum/re-verified
+    continuation. Parsing only the first header pulled in the grossing list as if
+    it were diagnostic text and produced duplicate/garbage specimens. Every
+    "Microscopic"-headed block is now parsed, keyed by specimen number, with later
+    blocks overwriting earlier ones for the same number — narrative text always
+    follows the grossing list and addenda always follow the narrative, in these
+    reports, so last-write-wins resolves to the correct diagnostic text per specimen.
     """
     path_note = clean_clinical_text(path_note)
-    m = re.search(r'Microscopic[:\s]*(.*?)(?:Comment|Macroscopic|Supplementary|Addendum|$)', path_note, re.I | re.S)
-    if not m:
+
+    header_matches = list(re.finditer(r'Microscopic[:\s]*', path_note, re.I))
+    if not header_matches:
         return []
 
-    micro_text = m.group(1).strip()
-    micro_text = re.sub(r'(?<!\n)\s*(\d+)\.\s+(?=["\'A-Z])', r'\n\1. ', micro_text)
-    items = re.split(r'\n\s*\d+\.\s*', micro_text)
-    items = [i.strip() for i in items if len(i.strip()) > 25]
+    stop_pat = re.compile(r'\b(?:Comment|Macroscopic|Supplementary|Addendum|Pathologist|Verified)\b', re.I)
+
+    items_by_number: dict[int, str] = {}
+    type_text_by_number: dict[int, str] = {}
+    for idx, hm in enumerate(header_matches):
+        start = hm.end()
+        next_header_start = header_matches[idx + 1].start() if idx + 1 < len(header_matches) else len(path_note)
+        block = path_note[start:next_header_start]
+        sm = stop_pat.search(block)
+        if sm:
+            block = block[:sm.start()]
+        block = block.strip()
+        if not block:
+            continue
+
+        block = re.sub(r'(?<!\n)\s*(\d+)\.\s+(?=["\'A-Z])', r'\n\1. ', block)
+        num_matches = list(re.finditer(r'(?:^|\n)\s*(\d+)\.\s*', block))
+        for n_idx, nm in enumerate(num_matches):
+            number = int(nm.group(1))
+            s = nm.end()
+            e = num_matches[n_idx + 1].start() if n_idx + 1 < len(num_matches) else len(block)
+            text = block[s:e].strip()
+            if len(text) > 25:
+                items_by_number[number] = text  # later block wins over earlier
+                # Track every block's text for this number too — the grossing
+                # block usually carries the "bx"/"polyp" wording that decides
+                # specimen_type, and that wording is often absent from the
+                # narrative block that wins for diagnosis/site purposes.
+                type_text_by_number[number] = type_text_by_number.get(number, "") + " " + text
+
+    items = [items_by_number[k] for k in sorted(items_by_number)]
 
     specimens = []
-    for item in items:
-        if not re.search(r'\b(polyp|adenoma|serrated|hyperplastic|polypectomy|biopsy|bx)\b', item, re.I):
-            continue
+    for number in sorted(items_by_number):
+        item = items_by_number[number]
+        type_text = type_text_by_number[number]
         site_raw = extract_site_raw(item) or "Unknown"
         if site_raw == "Unknown":
             continue
@@ -2178,7 +2265,7 @@ def extract_microscopic_specimens(path_note: str) -> list[PathologySpecimen]:
             fragment_count_total=1,
             fragment_count_certain=True,
             raw_text=item,
-            specimen_type="Biopsy" if is_biopsy_specimen_text(item) else "Polyp",
+            specimen_type="Biopsy" if is_biopsy_specimen_text(type_text) else "Polyp",
         ))
 
     return specimens
@@ -2928,7 +3015,16 @@ def merge_findings(
         candidate_specimens = [ps for ps in path_specimens if id(ps) not in matched_specimen_ids] or path_specimens
         for ps in candidate_specimens:
             score = site_match_score(ef.site, ps.site_norm)
-            if score > best_score:
+            # Supervisor feedback: when multiple specimens tie on site score,
+            # prefer the one whose specimen_type matches the endoscopy finding
+            # (a Polyp finding should match a Polyp specimen over a same-site
+            # Biopsy specimen, not just whichever appears first in the list).
+            if score > best_score or (
+                score == best_score and score > 0
+                and best_specimen is not None
+                and ps.specimen_type == ef.finding_type
+                and best_specimen.specimen_type != ef.finding_type
+            ):
                 best_score = score
                 best_specimen = ps
 
@@ -3805,7 +3901,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--output",
-        default="data/ testing NLP output.xlsx",
+        default="data/ testing NLP output2.xlsx",
         help="Output workbook path"
     )
     parser.add_argument("--sheet", default="Sheet1", help="Procedure sheet to process")
