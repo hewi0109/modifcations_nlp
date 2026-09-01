@@ -7,11 +7,11 @@ Modifications include;
   - Look for words like mass or tumour in the report
 
 
-  ##Testing the /extract API##
+  ## Testing the /extract API ##
 
 This endpoint runs the NLP pipeline over an uploaded colonoscopy/pathology workbook and returns extracted procedures, findings, and indications as JSON (or as an Excel workbook via format=csv).
 
-#1. Start the server#
+# 1. Start the server #
 bash
 python -m uvicorn pipeline_v13_spacy:app --reload
 
@@ -23,13 +23,13 @@ If uvicorn isn't recognised, install it first:
 
 bash
 pip install fastapi uvicorn python-multipart
-#2. Confirm it's running#
+# 2. Confirm it's running #
 
 Go to http://127.0.0.1:8000/docs in a browser. This is auto-generated from the actual routes — if /extract is listed there, the server is up and the endpoint exists.
 
 Visiting http://127.0.0.1:8000/extract directly in a browser will always show "Not Found." A browser address bar only sends GET requests, and /extract only accepts POST. Use /docs, curl, or Postman instead — never test this endpoint by pasting the URL into a browser tab.
 
-#3. Test it#
+# 3. Test it #
 Option A — /docs UI (best for small files)
 Go to http://127.0.0.1:8000/docs
 Click POST /extract → Try it out
@@ -74,7 +74,7 @@ data = response.json()
 proc_rows = data["procedures"]
 finding_rows = data["findings"]
 indication_rows = data["indications"]
-4. Query parameters
+# 4. Query parameters #
 Parameter	Default	Notes
 format	json	json or csv
 sheet_name	None	Leave blank to auto-process every sheet in the workbook
