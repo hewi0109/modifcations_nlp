@@ -641,13 +641,13 @@ MORPHOLOGY_RAW = [
     (re.compile(r'type\s+IIa\+IIc\b|paris\s+(?:classification\s+)?IIa\+IIc\b|IIa\+IIc', re.I), "type IIa+IIc"),
     (re.compile(r'type\s+IIc\+IIa\b|paris\s+(?:classification\s+)?IIc\+IIa\b|IIc\+IIa', re.I), "type IIa+IIc"),
 
-#    (re.compile(r'paris\s+0-IIa\+c\b', re.I), "type IIa+c"),
+    (re.compile(r'paris\s+0-IIa\+c\b', re.I), "Manual Curation"),
     (re.compile(r'paris\s+0-IIa\+Is\b', re.I), "type IIa+Is"),
     (re.compile(r'paris\s+0-Is\+IIa\b', re.I), "type IIa+IS"),
-#    (re.compile(r'paris\s+0-IIa\+Ib\b', re.I), "Manual Curation"),
-#    (re.compile(r'paris\s+0-Ib\+IIa\b', re.I), "Manual Curation"),
-#    (re.compile(r'paris\s+0-Is\+IIc\b', re.I), "Manual Curation"),
-#    (re.compile(r'paris\s+0-IIc\+Is\b', re.I), "Manual Curation"),
+    (re.compile(r'paris\s+0-IIa\+Ib\b', re.I), "Manual Curation"),
+    (re.compile(r'paris\s+0-Ib\+IIa\b', re.I), "Manual Curation"),
+    (re.compile(r'paris\s+0-Is\+IIc\b', re.I), "Manual Curation"),
+    (re.compile(r'paris\s+0-IIc\+Is\b', re.I), "Manual Curation"),
 
     (re.compile(r'paris\s+(?:classification\s+)?(?:0[-\s]+)?Is\b|type\s+(?:0[-\s]+)?Is\b|protruding.*sessile', re.I), "type Is"),
     (re.compile(r'paris\s+(?:classification\s+)?(?:0[-\s]+)?Ip\b|type\s+(?:0[-\s]+)?Ip\b|protruding.*pedunculated', re.I), "type Ip"),
@@ -655,7 +655,7 @@ MORPHOLOGY_RAW = [
     (re.compile(r'type\s+(?:0[-\s]+)?IIa\b|paris\s+(?:classification\s+)?(?:0[-\s]+)?IIa\b', re.I), "type IIa"),
     (re.compile(r'type\s+(?:0[-\s]+)?IIb\b|paris\s+(?:classification\s+)?(?:0[-\s]+)?IIb\b', re.I), "type IIb"),
     (re.compile(r'type\s+(?:0[-\s]+)?IIc\b|paris\s+(?:classification\s+)?(?:0[-\s]+)?IIc\b', re.I), "type IIc"),
-#    (re.compile(r'type\s+(?:0[-\s]+)?III\b|paris\s+(?:classification\s+)?(?:0[-\s]+)?III\b', re.I), "Manual Curation"),
+    (re.compile(r'type\s+(?:0[-\s]+)?III\b|paris\s+(?:classification\s+)?(?:0[-\s]+)?III\b', re.I), "Manual Curation"),
 
     (re.compile(r'\bsemi-?pedunculated\b', re.I), "semi-pedunculated"),
     (re.compile(r'\bmulti-?lobulated\b', re.I), "multi-lobulated"),
