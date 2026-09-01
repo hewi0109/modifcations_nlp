@@ -18,10 +18,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import date
-from fastapi import FastAPI, UploadFile, Query
-from fastapi.responses import StreamingResponse
 import pandas as pd
-import io
 
 try:
     from rapidfuzz import fuzz, process
@@ -3909,37 +3906,3 @@ if __name__ == "__main__":
     parser.add_argument("--year", type=int, default=2024, help="Procedure year to process")
     args = parser.parse_args()
     run_batch(args.input, args.output, args.sheet, args.findings_sheet, args.year)
-
-import tempfile, os
-
-app = FastAPI()
-
-@app.post("/extract")
-async def extract(
-    file: UploadFile,
-    format: str = Query("json", enum=["json", "csv"]),
-    sheet_name: str = Query(None),
-    findings_sheet: str = Query(None),
-    year: int = Query(2024),
-):
-    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
-        tmp.write(await file.read())
-        tmp_path = tmp.name
-
-    proc_rows, finding_rows, indication_rows = run_batch_data(
-        tmp_path, sheet_name, findings_sheet, year
-    )
-    os.remove(tmp_path)
-    ...
-
-    if format == "csv":
-        # only build workbook if csv specified
-        output_path = tmp_path.replace(".xlsx", "_output.xlsx")
-        build_excel_multi(proc_rows, finding_rows, output_path, indication_rows)
-        return StreamingResponse(open(output_path, "rb"), media_type="application/octet-stream")
-
-    return {
-        "procedures": proc_rows,
-        "findings": finding_rows,
-        "indications": indication_rows,
-    }
