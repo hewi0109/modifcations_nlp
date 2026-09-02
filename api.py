@@ -1,4 +1,5 @@
-from pipeline_v13_spacy import run_batch_data, build_excel_multi
+from excel_out import build_excel_multi
+from main import run_batch_data
 
 import tempfile, os
 from fastapi import FastAPI, UploadFile, Query
