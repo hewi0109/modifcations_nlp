@@ -13,7 +13,7 @@ This endpoint runs the NLP pipeline over an uploaded colonoscopy/pathology workb
 
 ## 1. Start the server ##
 bash
-python -m uvicorn pipeline_v13_spacy:app --reload
+python -m uvicorn api:app --reload
 
 You should see:
 

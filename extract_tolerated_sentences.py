@@ -16,7 +16,6 @@ import argparse
 import re
 import sys
 from pathlib import Path
-
 import pandas as pd
 
 # Matches from "the patient tolerated" up to and including the next period.
