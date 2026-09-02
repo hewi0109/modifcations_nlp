@@ -14,3 +14,4 @@ __pycache__/
 *.py[cod]
 
 compare_workbooks.py
+extract_tolerated_sentences.py
