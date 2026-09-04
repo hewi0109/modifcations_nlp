@@ -118,6 +118,8 @@ def extract_completeness_raw(text: str) -> str:
         return "Not retrieved"
     if re.search(r'resection and retrieval were complete|complete resection|retrieved.*complete', t):
         return "Complete"
+    if re.search(r'resection was complete\b', t):
+        return "Complete"
     if re.search(r'\bincomplete\b|\bpartial\b', t):
         return "Incomplete"
     if re.search(r'not retrieved\b', t):
@@ -859,7 +861,7 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
         completeness = "Incomplete"
         reason_incomplete = extract_incomplete_reason(note_clean, difficulty_reason, prep_quality) or f"Manual Curation Needed"
 
-    manual_curation = "No specimens collected" if impression_has_no_specimens_collected(note) else "No"
+    manual_curation = "No"
 
     return {
         "CMBSMain": CMBSMain,
