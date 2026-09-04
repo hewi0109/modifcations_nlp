@@ -55,18 +55,29 @@ def is_upper_endoscopy_type(procedure_type: str) -> bool:
 
 
 def isolate_relevant_endoscopy_text(note: str, procedure_type: str = "") -> str:
-    """Return the colorectal section when Upper GI and lower-GI reports are combined.
+    """Return only the section of a combined report matching this procedure's
+    type (colorectal or upper GI), so NLP extraction never sees the other
+    procedure's text.
 
     Supervisor feedback 26.06.26: some source reports contain both Upper GI
-    Endoscopy and Colonoscopy/Flexible Sigmoidoscopy sections. We preserve the
-    original report in Excel, but all colorectal NLP should run only on the
-    colonoscopy/sigmoidoscopy section to avoid mixing upper-GI findings.
+    Endoscopy and Colonoscopy/Flexible Sigmoidoscopy sections. We preserve
+    the original report in Excel, but all NLP should run only on the
+    section matching this row's own procedure type -- previously, upper-GI
+    rows received the entire unfiltered combined report, letting fields
+    like Difficulty be silently populated from the colonoscopy section.
+
+    The report is split into chunks at each detected section heading (e.g.
+    "----- Upper GI Endoscopy Report -----"). Any text before the first
+    heading has no heading of its own, so its kind is inferred from its own
+    "Procedure: ..." line instead. Chunks matching the target procedure
+    type are kept; everything else is dropped.
     """
-    if is_missing_report_text(note) or is_upper_endoscopy_type(procedure_type):
-        return "" if is_missing_report_text(note) else str(note)
+    if is_missing_report_text(note):
+        return ""
 
     text = str(note)
     text = re.sub(r'_?x000D_|_?x000A_|\r', '\n', text, flags=re.I)
+
     heading_re = re.compile(
         r'(?im)^\s*(?:[-=]+\s*)?(?P<title>'
         r'(?:Upper\s+GI\s+Endoscopy|Gastroscopy|Oesophago.*?duodenoscopy|Esophago.*?duodenoscopy|EGD|'
@@ -74,32 +85,45 @@ def isolate_relevant_endoscopy_text(note: str, procedure_type: str = "") -> str:
         r'(?:\s+Report|\s+Procedure\s+Report)?)\s*:?\s*(?:[-=]+)?\s*$'
     )
     headings = [(m.start(), m.end(), m.group("title")) for m in heading_re.finditer(text)]
+
     if not headings:
+        # Nothing to isolate against -- return the whole note rather than
+        # guessing which parts belong to which procedure type.
         return str(note)
 
-    def kind(title: str) -> str:
-        return "colorectal" if re.search(r'\b(?:colon|sigmoid)\b', title, re.I) else "upper"
+    target_kind = "upper" if is_upper_endoscopy_type(procedure_type) else "colorectal"
 
-    colorectal_sections = []
-    first_heading_start = headings[0][0]
-    prefix = text[:first_heading_start].strip()
+    def chunk_kind(chunk_text: str, heading_title: str | None) -> str:
+        if heading_title is not None:
+            return "colorectal" if re.search(r'\b(?:colon|sigmoid)\b', heading_title, re.I) else "upper"
+        if re.search(r'\bProcedure\s*:?\s*(?:Colonoscopy|Flexible\s+Sigmoid(?:o)?scopy|Flexible\s+Colonoscopy)\b', chunk_text, re.I):
+            return "colorectal"
+        if re.search(r'\bProcedure\s*:?\s*(?:Upper\s+GI\s+Endoscopy|Gastroscopy|Oesophago|Esophago|EGD)\b', chunk_text, re.I):
+            return "upper"
+        return "unknown"
+
+    chunks = []
+    first_start = headings[0][0]
+    prefix_text = text[:first_start].strip()
+    if prefix_text:
+        chunks.append((chunk_kind(prefix_text, None), prefix_text))
     for idx, (start, end, title) in enumerate(headings):
         section_end = headings[idx + 1][0] if idx + 1 < len(headings) else len(text)
-        if kind(title) == "colorectal":
-            colorectal_sections.append(text[start:section_end].strip())
+        section_text = text[start:section_end].strip()
+        chunks.append((chunk_kind(section_text, title), section_text))
 
-    if not colorectal_sections:
-        # Some mixed reports label only the later Upper GI section with a formal
-        # heading; the earlier colorectal section is introduced as
-        # "Procedure: Colonoscopy". In that common layout, drop everything from
-        # the Upper GI heading onward.
-        if headings and re.search(r'\b(?:colonoscopy|sigmoidoscopy|flexible\s+sigmoid)', procedure_type, re.I):
-            before_first_upper = text[:headings[0][0]].strip()
-            if re.search(r'\bProcedure\s*:?\s*(?:Colonoscopy|Flexible\s+Sigmoid)', before_first_upper, re.I):
-                return before_first_upper
-        return str(note)
+    matched = [chunk for kind, chunk in chunks if kind == target_kind]
+    if matched:
+        return "\n".join(matched).strip()
 
-    return "\n".join(part for part in [prefix] + colorectal_sections if part).strip()
+    # Nothing confidently matched the target kind. If the whole report is a
+    # single unheaded/unclassified chunk, return it as-is rather than
+    # dropping everything -- this preserves the original "no headings"
+    # fallback behaviour for single-section reports with unusual headers.
+    if len(chunks) == 1:
+        return chunks[0][1]
+
+    return str(note)
 
 def fuzzy_phrase_present(text: str, phrase: str, threshold: int = 90) -> bool:
     """Return True if a phrase is approximately present in the text."""
