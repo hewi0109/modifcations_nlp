@@ -4,7 +4,6 @@ from main import run_batch_data
 import tempfile, os
 from fastapi import FastAPI, UploadFile, Query
 from fastapi.responses import StreamingResponse
-import pandas as pd
 
 app = FastAPI()
 

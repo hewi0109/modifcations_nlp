@@ -94,7 +94,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
         flags=re.I
     )
     findings_text = re.sub(
-        r'\s+(?=(?:A|An)\s+(?:small|large|tiny)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+polyp\b)',
+        r'\s+(?=(?:A|An)\s+(?:small|large|tiny)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}polyp\b)',
         '\n',
         findings_text,
         flags=re.I
@@ -104,7 +104,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
     findings_text = re.sub(
         r'(?<=\.)\s+(?='
         r'(?:A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}(?:polyp|mass|tumou?r)|'
-        r'(?:A|An)\s+(?:small|large|tiny)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:polyp|mass|tumou?r)|'
+        r'(?:A|An)\s+(?:small|large|tiny|minute)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:polyp|mass|tumou?r)|'
         r'(?:A|An)\s+colonic\s+(?:tumou?r|mass)|'
         r'(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|\d+)\s+(?:\d+\s*mm\s+)?(?:paris|sessile|flat|pedunculated|polyps?)|'
         r'Biopsies?\s+were\s+taken|'

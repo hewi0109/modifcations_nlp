@@ -441,7 +441,7 @@ def extract_difficulty_and_reason(note_clean: str) -> tuple[str, str]:
     # difficulty due to..." are true difficulty statements; if no difficulty is
     # documented, the reason column should be NA rather than Not documented.
     if re.search(r'\bwithout difficulty\b|\bwith ease\b|\bperformed (?:easily|smoothly)\b', note_clean, re.I):
-        return "No difficulty", "NA"
+        return "No", "NA"
 
     MOD = r'(?:some|mild|moderate|significant|considerable|substantial|extreme|great)'
     ADV = r'(?:somewhat|mildly|moderately|very|unusually|extremely|significantly)'
@@ -460,7 +460,7 @@ def extract_difficulty_and_reason(note_clean: str) -> tuple[str, str]:
         groups = m.groups()
         reason = _clean_reason_phrase(groups[1]) if len(groups) > 1 and groups[1] else "Not documented"
         if difficulty:
-            return difficulty, reason
+            return "Yes", reason
 
     return "Not documented", "Not documented"
 
