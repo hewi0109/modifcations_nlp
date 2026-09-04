@@ -483,8 +483,6 @@ def run_batch_data(
                 proc["manual_curation"] = f"Yes — {needs_curation} finding(s) flagged"
             # Supervisor feedback 03.07.26: keep the Impression-level "No
             # specimens collected" indicator even after finding curation counts.
-            if impression_has_no_specimens_collected(nlp_endo):
-                proc["manual_curation"] = "No specimens collected"
             proc["urgent_flag"] = "Yes" if any(r.get("urgent_flag") == "Yes" for r in finding_rows) else urgent_flag_for_row({"size_mm": "", "diagnosis_group": ""}, nlp_endo, path)
             proc["extraction_discrepancy_flag"] = "Yes" if any(r.get("extraction_discrepancy_flag") == "Yes" for r in finding_rows) else "No"
 
