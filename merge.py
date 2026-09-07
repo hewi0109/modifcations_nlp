@@ -392,7 +392,6 @@ def build_upper_gi_placeholder_finding(CMBSMain: str) -> dict:
         "negated": "No",
         "hedged": "No",
         "hedge_type": "N/A",
-        "confidence": "0%",
         "manual_curation": "Yes",
         "curation_reason": "Upper GI Procedure (Nurse Check)",
         "urgent_flag": "No",
@@ -472,7 +471,6 @@ def _append_row(
         "negated": "No",
         "hedged": "No",
         "hedge_type": "N/A",
-        "confidence": f"{int(ef.confidence * 100)}%",
         "manual_curation": manual_curation,
         "curation_reason": curation_reason,
         "urgent_flag": "No",
@@ -533,7 +531,6 @@ def merge_findings(
                 "negated":                           "No",
                 "hedged":                            "No",
                 "hedge_type":                        "N/A",
-                "confidence":                        "85%",
                 "manual_curation":                   "Yes",
                 "curation_reason": (
                     "Pathology-only polyp finding — no endoscopy finding extracted"
@@ -718,7 +715,6 @@ def merge_findings(
             "negated": "No",
             "hedged": "No",
             "hedge_type": "N/A",
-            "confidence": "80%",
             "manual_curation": "Yes",
             "curation_reason": (
                 "Pathology-only polyp finding — no matching endoscopy row"
