@@ -71,13 +71,3 @@ DYSPLASIA_PATTERNS = [
         re.I), "No dysplasia"),
     (re.compile(r'unable\s+to\s+assess', re.I), "Unable to assess"),
 ]
-
-COLITIS_FAMILY_PATTERNS = [
-    (re.compile(r"crohn'?s\s+(?:disease|colitis)|crohn'?s\b", re.I), "Crohn's colitis"),
-    (re.compile(r'\bulcerative\s+colitis\b', re.I), "Ulcerative colitis"),
-    (re.compile(r'\bindeterminate\s+colitis\b', re.I), "Indeterminate colitis"),
-    (re.compile(r'\bquiescent\s+colitis\b', re.I), "Quiescent colitis"),
-    (re.compile(r'\bpouchitis\b', re.I), "Pouchitis"),
-    (re.compile(r'\bproctitis\b', re.I), "Proctitis"),
-    (re.compile(r'\bcolitis\b', re.I), "Colitis"),
-]
