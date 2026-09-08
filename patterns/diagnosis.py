@@ -29,7 +29,7 @@ DIAG_PATTERNS = [
     (re.compile(
         r'no\s+definite\s+polyp\s+identified|'
         r'no\s+significant\s+pathology|no\s+diagnostic\s+lesion|no\s+specific\s+diagnosis|'
-        r'no\s+significant\s+histoligcal\s+abnormality(?:\s+identified)?|'
+        r'no\s+significant\s+histological\s+abnormality(?:\s+identified)?|'
         r'no\s+histolog(?:ical)?\s+(?:evidence\s+of\s+a\s+)?polyp|'
         r'benign\s+prominent\s+mucosal\s+fold|unremarkable\s+(?:colonic\s+)?mucosa|'
         r'no\s+serrated\s+polyp.*no.*dysplas|degenerate\s+fragment|'
