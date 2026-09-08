@@ -24,6 +24,17 @@ POLYP_INDICATOR_RE = re.compile(
     r'\bpolyps?\b|\badenomas?\b|\blesions?\b|\bmass\b|\bgrowth\b|\btumou?rs?\b', re.I
 )
 
+NOT_REMOVED_RE = re.compile(
+    r'\bleft\s+in\s+situ\b|'
+    r'\bnot\s+(?:excised|removed|resected)\b|'
+    r'\b(?:excision|removal|resection)\s+(?:not\s+performed|deferred|not\s+attempted)\b|'
+    r'\bno\s+attempt\s+(?:was\s+)?made\s+to\s+(?:excise|remove|resect)\b|'
+    r'\bdeferred\s+(?:excision|removal|resection)\b|'
+    r'\bpolyp(?:ectomy)?\s+deferred\b|'
+    r'\bunable\s+to\s+(?:excise|remove|resect)\b',
+    re.I
+)
+
 # ─────────────────────────────────────────────────────────────────
 # STAGE 2: ENDOSCOPY FINDINGS EXTRACTOR
 # Splits by bullet/finding sentence, counts polyps, expands to N rows
@@ -37,12 +48,13 @@ class EndoscopyFinding:
     size: str
     intervention: str
     completeness: str
-    finding_type: str        # "Polyp" or "Biopsy"
+    finding_type: str
     is_polyp: bool
     is_negated: bool
     is_hedged: bool
     hedge_type: str = ""
     raw_text: str = ""
+    is_left_in_situ: bool = False
 
 def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
     # Clean report artefacts while preserving function structure
@@ -93,7 +105,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
         flags=re.I
     )
     findings_text = re.sub(
-        r'\s+(?=(?:A|An)\s+(?:small|large|tiny)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}polyp\b)',
+        r'\s+(?=(?:A|An)\s+(?:small|large|tiny|diminutive)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}polyp\b)',
         '\n',
         findings_text,
         flags=re.I
@@ -103,7 +115,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
     findings_text = re.sub(
         r'(?<=\.)\s+(?='
         r'(?:A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}(?:polyp|mass|tumou?r)|'
-        r'(?:A|An)\s+(?:small|large|tiny|minute)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:polyp|mass|tumou?r)|'
+        r'(?:A|An)\s+(?:small|large|tiny|minute|diminutive)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:polyp|mass|tumou?r)|'
         r'(?:A|An)\s+colonic\s+(?:tumou?r|mass)|'
         r'(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|\d+)\s+(?:\d+\s*mm\s+)?(?:paris|sessile|flat|pedunculated|polyps?)|'
         r'Biopsies?\s+were\s+taken|'
@@ -125,7 +137,11 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
     )
 
     # Also insert newline before ALL-CAPS finding lines
-    findings_text = re.sub(r'(?<=\s)([A-Z]{4,}[A-Z\s]+(?:CM|MM)\b)', r'\n\1', findings_text)
+    findings_text = re.sub(
+        r'(?<=\s)([A-Z]{4,}[A-Z\s]*(?:CM|MM|ESD|EMR))\b',
+        r'\n\1',
+        findings_text
+    )
 
     # Split by bullet points if present, otherwise by sentence-level newlines
     if re.search(r'\n\s*[-•]\s+', findings_text):
@@ -141,9 +157,9 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
                 continue
             # New finding starts with these patterns
             is_new_finding = bool(re.match(
-                r'^(?:A\s+\d|An?\s+\d|An?\s+(?:small|large|tiny)\s+\(?\d|\d+\s+(?:polyp|sessile|flat)|'
+                r'^(?:A\s+\d|An?\s+\d|An?\s+(?:small|large|tiny|diminutive)\s+\(?\d|\d+\s+(?:polyp|sessile|flat)|'
                 r'(?:one|two|three|four|five|six|seven|eight|nine|ten)'
-                r'\s+(?:(?:hyperplastic|sessile|flat|pedunculated|small|tiny|other)\s+){0,5}(?:paris|sessile|flat|pedunculated|polyps?|[0-9]|\d)|'
+                r'\s+(?:(?:hyperplastic|sessile|flat|pedunculated|small|tiny|other|diminutive)\s+){0,5}(?:paris|sessile|flat|pedunculated|polyps?|[0-9]|\d)|'
                 r'(?:(?:Multiple|Several|Many)|A\s+(?:sessile|flat|pedunculated|mass|colonic\s+(?:tumou?r|mass))))',
                 line, re.I
             ))
@@ -243,6 +259,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
 
         count = parse_polyp_count(block)
         size  = extract_size(block)
+        is_left_in_situ = bool(NOT_REMOVED_RE.search(block))
 
         interv_raw  = extract_intervention_raw(block)
         if interv_raw == "Not documented" and not re.search(r'\bdestroyed\b|diathermy|ablated', block, re.I) and re.search(
@@ -316,6 +333,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
                     is_negated=is_neg, is_hedged=True,
                     hedge_type="multi_site",
                     raw_text=block,
+                    is_left_in_situ=is_left_in_situ,
                 ))
         else:
             findings.append(EndoscopyFinding(
@@ -326,6 +344,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
                 is_negated=is_neg, is_hedged=is_hed,
                 hedge_type=htype,
                 raw_text=block,
+                is_left_in_situ=is_left_in_situ,
             ))
 
     return findings
