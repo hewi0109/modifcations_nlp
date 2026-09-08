@@ -42,7 +42,6 @@ class EndoscopyFinding:
     is_negated: bool
     is_hedged: bool
     hedge_type: str = ""
-    confidence: float = 1.0
     raw_text: str = ""
 
 def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
@@ -292,9 +291,6 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
         htype  = "uncertain" if HEDGE_UNCERTAIN_RE.search(block) else (
                  "intended" if HEDGE_INTENDED_RE.search(block) else "")
 
-        confidence = min(site_conf, morph_conf) if site_conf > 0 and morph_conf > 0 else 0.8
-        if is_hed: confidence *= 0.7
-        if "[UNMATCHED" in site_norm: confidence *= 0.5
 
         if multi_sites:
             # Distribute count as evenly as possible across sites
@@ -319,7 +315,6 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
                     is_polyp=(finding_type == "Polyp"),
                     is_negated=is_neg, is_hedged=True,
                     hedge_type="multi_site",
-                    confidence=round(confidence * 0.85, 2),
                     raw_text=block,
                 ))
         else:
@@ -330,7 +325,6 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
                 is_polyp=(finding_type == "Polyp"),
                 is_negated=is_neg, is_hedged=is_hed,
                 hedge_type=htype,
-                confidence=round(confidence, 2),
                 raw_text=block,
             ))
 

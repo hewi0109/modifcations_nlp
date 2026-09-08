@@ -114,12 +114,12 @@ def build_excel_multi(proc_rows: list[dict], finding_rows: list[dict], output_pa
         "Finding_intervention_performed", "Finding_intervention_completeness",
         "Type", "Diagnosis_group", "Dysplasia",
         "Path_site_matched", "Path_match_score", "Mixed_pathology",
-        "Count_mismatch", "Negated", "Hedged", "Confidence",
+        "Count_mismatch", "Negated", "Hedged",
         "Manual_curation", "Curation_reason",
         "Urgent_flag", "Extraction_discrepancy_flag",
         "pathology_report_text", "endoscopy_report_text"
     ]
-    find_widths = [14,18,16,24,16,20,22,22,20,14,12,24,26,10,28,24,22,14,14,14,10,10,12,14,40,16,26,100,100]
+    find_widths = [14,18,16,24,16,20,22,22,20,14,12,24,26,10,28,24,22,14,14,14,10,10,14,40,16,26,100,100]
 
     manual_cur_col = find_headers.index("Manual_curation") + 1
 
@@ -148,7 +148,6 @@ def build_excel_multi(proc_rows: list[dict], finding_rows: list[dict], output_pa
             fr["count_mismatch"],
             fr["negated"],
             fr["hedged"],
-            fr["confidence"],
             fr["manual_curation"],
             fr["curation_reason"],
             fr.get("urgent_flag", "No"),
