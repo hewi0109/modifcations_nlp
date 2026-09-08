@@ -106,7 +106,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
         flags=re.I
     )
     findings_text = re.sub(
-        r'\s+(?=(?:A|An)\s+(?:small|large|tiny)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}polyp\b)',
+        r'\s+(?=(?:A|An)\s+(?:small|large|tiny|diminutive)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}polyp\b)',
         '\n',
         findings_text,
         flags=re.I
@@ -116,7 +116,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
     findings_text = re.sub(
         r'(?<=\.)\s+(?='
         r'(?:A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}(?:polyp|mass|tumou?r)|'
-        r'(?:A|An)\s+(?:small|large|tiny|minute)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:polyp|mass|tumou?r)|'
+        r'(?:A|An)\s+(?:small|large|tiny|minute|diminutive)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:polyp|mass|tumou?r)|'
         r'(?:A|An)\s+colonic\s+(?:tumou?r|mass)|'
         r'(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|\d+)\s+(?:\d+\s*mm\s+)?(?:paris|sessile|flat|pedunculated|polyps?)|'
         r'Biopsies?\s+were\s+taken|'
@@ -158,9 +158,9 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
                 continue
             # New finding starts with these patterns
             is_new_finding = bool(re.match(
-                r'^(?:A\s+\d|An?\s+\d|An?\s+(?:small|large|tiny)\s+\(?\d|\d+\s+(?:polyp|sessile|flat)|'
+                r'^(?:A\s+\d|An?\s+\d|An?\s+(?:small|large|tiny|diminutive)\s+\(?\d|\d+\s+(?:polyp|sessile|flat)|'
                 r'(?:one|two|three|four|five|six|seven|eight|nine|ten)'
-                r'\s+(?:(?:hyperplastic|sessile|flat|pedunculated|small|tiny|other)\s+){0,5}(?:paris|sessile|flat|pedunculated|polyps?|[0-9]|\d)|'
+                r'\s+(?:(?:hyperplastic|sessile|flat|pedunculated|small|tiny|other|diminutive)\s+){0,5}(?:paris|sessile|flat|pedunculated|polyps?|[0-9]|\d)|'
                 r'(?:(?:Multiple|Several|Many)|A\s+(?:sessile|flat|pedunculated|mass|colonic\s+(?:tumou?r|mass))))',
                 line, re.I
             ))
