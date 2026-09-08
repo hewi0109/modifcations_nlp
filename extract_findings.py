@@ -261,7 +261,6 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
         count = parse_polyp_count(block)
         size  = extract_size(block)
         is_left_in_situ = bool(NOT_REMOVED_RE.search(block))
-        print(f"[BLOCK] is_left_in_situ={is_left_in_situ} | {block[:150]!r}")
 
         interv_raw  = extract_intervention_raw(block)
         if interv_raw == "Not documented" and not re.search(r'\bdestroyed\b|diathermy|ablated', block, re.I) and re.search(
