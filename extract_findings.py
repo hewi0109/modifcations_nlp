@@ -24,6 +24,17 @@ POLYP_INDICATOR_RE = re.compile(
     r'\bpolyps?\b|\badenomas?\b|\blesions?\b|\bmass\b|\bgrowth\b|\btumou?rs?\b', re.I
 )
 
+NOT_REMOVED_RE = re.compile(
+    r'\bleft\s+in\s+situ\b|'
+    r'\bnot\s+(?:excised|removed|resected)\b|'
+    r'\b(?:excision|removal|resection)\s+(?:not\s+performed|deferred|not\s+attempted)\b|'
+    r'\bno\s+attempt\s+(?:was\s+)?made\s+to\s+(?:excise|remove|resect)\b|'
+    r'\bdeferred\s+(?:excision|removal|resection)\b|'
+    r'\bpolyp(?:ectomy)?\s+deferred\b|'
+    r'\bunable\s+to\s+(?:excise|remove|resect)\b',
+    re.I
+)
+
 # ─────────────────────────────────────────────────────────────────
 # STAGE 2: ENDOSCOPY FINDINGS EXTRACTOR
 # Splits by bullet/finding sentence, counts polyps, expands to N rows
@@ -37,13 +48,14 @@ class EndoscopyFinding:
     size: str
     intervention: str
     completeness: str
-    finding_type: str        # "Polyp" or "Biopsy"
+    finding_type: str
     is_polyp: bool
     is_negated: bool
     is_hedged: bool
     hedge_type: str = ""
     confidence: float = 1.0
     raw_text: str = ""
+    is_left_in_situ: bool = False
 
 def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
     # Clean report artefacts while preserving function structure
@@ -126,7 +138,11 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
     )
 
     # Also insert newline before ALL-CAPS finding lines
-    findings_text = re.sub(r'(?<=\s)([A-Z]{4,}[A-Z\s]+(?:CM|MM)\b)', r'\n\1', findings_text)
+    findings_text = re.sub(
+        r'(?<=\s)([A-Z]{4,}[A-Z\s]*(?:CM|MM|ESD|EMR))\b',
+        r'\n\1',
+        findings_text
+    )
 
     # Split by bullet points if present, otherwise by sentence-level newlines
     if re.search(r'\n\s*[-•]\s+', findings_text):
@@ -244,6 +260,8 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
 
         count = parse_polyp_count(block)
         size  = extract_size(block)
+        is_left_in_situ = bool(NOT_REMOVED_RE.search(block))
+        print(f"[BLOCK] is_left_in_situ={is_left_in_situ} | {block[:150]!r}")
 
         interv_raw  = extract_intervention_raw(block)
         if interv_raw == "Not documented" and not re.search(r'\bdestroyed\b|diathermy|ablated', block, re.I) and re.search(
@@ -321,6 +339,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
                     hedge_type="multi_site",
                     confidence=round(confidence * 0.85, 2),
                     raw_text=block,
+                    is_left_in_situ=is_left_in_situ,
                 ))
         else:
             findings.append(EndoscopyFinding(
@@ -332,6 +351,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
                 hedge_type=htype,
                 confidence=round(confidence, 2),
                 raw_text=block,
+                is_left_in_situ=is_left_in_situ,
             ))
 
     return findings

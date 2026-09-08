@@ -552,6 +552,23 @@ def merge_findings(
     matched_specimen_ids = set()
 
     for ef in endo_findings:
+        if ef.is_left_in_situ:
+            # Not excised — no tissue was sent to pathology, so this finding
+            # should never consume/claim a pathology specimen.
+            _append_row(
+                rows, ef, CMBSMain,
+                count=ef.count,
+                diag_group="Not documented",
+                dysplasia="Not documented",
+                path_matched=False,
+                best_specimen=None,
+                best_score=0,
+                mixed=False,
+                count_mismatch=False,
+                curation_reason="Not excised — left in situ, no pathology expected"
+            )
+            continue
+
         best_specimen = None
         best_score = 0
         # Supervisor feedback 26.06.26: when pathology has separate same-site
