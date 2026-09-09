@@ -46,7 +46,7 @@ def run(endo_note: str, path_note: str, output_path: str):
     endo_findings = extract_endoscopy_findings(nlp_endo_note)
     print(f"\n[ENDOSCOPY FINDINGS] — {len(endo_findings)} finding groups")
     for ef in endo_findings:
-        print(f"  {ef.count}x {ef.morphology} @ {ef.site} | {ef.size} | {ef.intervention} | conf:{ef.confidence:.0%}")
+        print(f"  {ef.count}x {ef.morphology} @ {ef.site} | {ef.size} | {ef.intervention}")
 
     path_specimens = extract_pathology_specimens(path_note)
     print(f"\n[PATHOLOGY SPECIMENS] — {len(path_specimens)} specimens")
