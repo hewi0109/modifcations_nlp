@@ -1,10 +1,10 @@
 import uuid
 import re
 from textClean import is_missing_report_text, isolate_relevant_endoscopy_text, _match_text
-from extract_procedure import (apply_procedure_finding_terms, extract_procedure, resolve_procedure_date,
-                               impression_has_no_specimens_collected)
-from extract_findings import extract_endoscopy_findings
-from extract_pathology import extract_pathology_specimens
+from extraction.extract_procedure import (apply_procedure_finding_terms, extract_procedure, resolve_procedure_date,
+                                          impression_has_no_specimens_collected)
+from extraction.extract_findings import extract_endoscopy_findings
+from extraction.extract_pathology import extract_pathology_specimens
 from merge import (merge_findings, apply_no_pathology_report_to_finding,
                    apply_no_endoscopy_report_to_finding, build_indication_rows,
                    apply_upper_gi_overrides_to_finding, apply_procedure_type_overrides,

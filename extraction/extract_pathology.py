@@ -1,11 +1,11 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from textClean import clean_clinical_text, normalise, fuzzy_phrase_present
 import re
 from patterns.diagnosis import COLITIS_FAMILY_PATTERNS, DIAG_PATTERNS, DYSPLASIA_PATTERNS
 from spacy_engine import SPACY_ENGINE
 from vocab import DIAGNOSIS_GROUP_VOCAB, DYSPLASIA_VOCAB, FINDING_SITE_VOCAB, UPPER_GI_SITES
 from patterns.sites import extract_site_raw, SITE_RAW_PATTERNS, dedupe_sites_preferring_specific
-from extract_findings import NEGATION_RE
+from extraction.extract_findings import NEGATION_RE
 
 
 
