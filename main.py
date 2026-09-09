@@ -532,7 +532,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="v12 spaCy-enhanced colonoscopy/pathology polyp and indication extraction pipeline")
     parser.add_argument(
         "--input",
-        default="data/Testing proc book.xlsx",
+        default="data/2026_Source_Data_NLP.xlsx",
         help="Input workbook path, defaulting to the input dataset"
     )
     parser.add_argument(
