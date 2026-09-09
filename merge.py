@@ -454,6 +454,14 @@ def _append_row(
 
     number_categorical = None if ef.finding_type == "Biopsy" else count
 
+    # A successful pathology match is direct proof this specimen was
+    # retrieved -- overrides a "Not retrieved" completeness value that was
+    # only ever a block-level guess (e.g. from multi-site text where the
+    # retrieval caveat actually applied to a different site).
+    completeness = ef.completeness
+    if path_matched and completeness == "Not retrieved":
+        completeness = "Complete"
+
     rows.append({
         "finding_id": f"F-{str(uuid.uuid4())[:6].upper()}",
         "CMBSMain": CMBSMain,
@@ -462,7 +470,7 @@ def _append_row(
         "number_categorical": number_categorical,
         "size_mm": size,
         "finding_intervention_performed": ef.intervention,
-        "finding_intervention_completeness": ef.completeness,
+        "finding_intervention_completeness": completeness,
         "type": ef.finding_type,
         "diagnosis_group": diag_group,
         "dysplasia": dysplasia,
@@ -559,8 +567,8 @@ def merge_findings(
             _append_row(
                 rows, ef, CMBSMain,
                 count=ef.count,
-                diag_group="Not documented",
-                dysplasia="Not documented",
+                diag_group="Not retrieved",
+                dysplasia="Not retrieved",
                 path_matched=False,
                 best_specimen=None,
                 best_score=0,
@@ -595,11 +603,15 @@ def merge_findings(
         path_matched = best_specimen is not None and best_score >= 60
 
         if not path_matched:
+            if ef.completeness == "Not retrieved":
+                endo_diag = "Not retrieved"
+                endo_dys = "Not retrieved"
+            else:
             # Supervisor feedback (1497976): if the endoscopist explicitly
             # calls unretrieved polyps hyperplastic, preserve that as the best
             # available diagnosis instead of "Not documented".
-            endo_diag = "Hyperplastic polyp" if re.search(r'\bhyperplastic\b', ef.raw_text, re.I) else "Not documented"
-            endo_dys = "N/A" if endo_diag == "Hyperplastic polyp" else "Not documented"
+                endo_diag = "Hyperplastic polyp" if re.search(r'\bhyperplastic\b', ef.raw_text, re.I) else "Not documented"
+                endo_dys = "N/A" if endo_diag == "Hyperplastic polyp" else "Not documented"
             _append_row(
                 rows, ef, CMBSMain,
                 count=ef.count,

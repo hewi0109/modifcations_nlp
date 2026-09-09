@@ -4,7 +4,7 @@ from vocab import FINDING_SITE_VOCAB, FINDING_MORPHOLOGY_VOCAB, INTERVENTION_COM
 from patterns.sites import SITE_RAW_PATTERNS, extract_site_raw, normalise_compound_site_text, extract_site_count_pairs, dedupe_sites_preferring_specific, parse_polyp_count
 from textClean import clean_clinical_text, normalise
 from patterns.morphology import extract_morphology_raw
-from extract_procedure import extract_completeness_raw, extract_intervention_raw, extract_size
+from .extract_procedure import extract_completeness_raw, extract_intervention_raw, extract_size
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -304,6 +304,8 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
             comp_norm = "Not reported"
 
         is_neg = bool(NEGATION_RE.search(primary_sentence))
+        if is_neg:
+            continue
         is_hed = bool(HEDGE_UNCERTAIN_RE.search(block) or HEDGE_INTENDED_RE.search(block))
         htype  = "uncertain" if HEDGE_UNCERTAIN_RE.search(block) else (
                  "intended" if HEDGE_INTENDED_RE.search(block) else "")
