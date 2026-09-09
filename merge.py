@@ -452,12 +452,14 @@ def _append_row(
         current_reason=curation_reason,
     )
 
+    number_categorical = None if ef.finding_type == "Biopsy" else count
+
     rows.append({
         "finding_id": f"F-{str(uuid.uuid4())[:6].upper()}",
         "CMBSMain": CMBSMain,
         "site": ef.site,
         "finding_morphology": ef.morphology,
-        "number_categorical": count,
+        "number_categorical": number_categorical,
         "size_mm": size,
         "finding_intervention_performed": ef.intervention,
         "finding_intervention_completeness": ef.completeness,
@@ -511,6 +513,8 @@ def merge_findings(
             inferred_count = ps.fragment_count_total if ps.fragment_count_total and ps.fragment_count_total < 99 else 1
             if inferred_count < 1:
                 inferred_count = 1
+            if not is_polyp_case:
+                inferred_count = None
 
             rows.append({
                 "finding_id":                        f"F-{str(uuid.uuid4())[:6].upper()}",
@@ -718,7 +722,8 @@ def merge_findings(
             "CMBSMain": CMBSMain,
             "site": ps.site_norm,
             "finding_morphology": "Not documented",
-            "number_categorical": ps.fragment_count_total if 0 < ps.fragment_count_total < 99 else 1,
+            "number_categorical": ((ps.fragment_count_total if 0 < ps.fragment_count_total < 99 else 1)
+            if is_polyp_case else None),
             "size_mm": "Not documented",
             "finding_intervention_performed": "Not documented" if is_polyp_case else "Biopsy only",
             "finding_intervention_completeness": "Not reported" if is_polyp_case else "Not applicable",
