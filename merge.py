@@ -3,8 +3,8 @@ import uuid
 from textClean import is_missing_report_text, normalise, is_upper_endoscopy_type, _match_text
 from vocab import DIAGNOSIS_GROUP_VOCAB, DYSPLASIA_VOCAB, DIAGNOSIS_SEVERITY, DYSPLASIA_SEVERITY
 from difflib import SequenceMatcher
-from extract_findings import EndoscopyFinding
-from extract_pathology import PathologySpecimen
+from extraction.extract_findings import EndoscopyFinding
+from extraction.extract_pathology import PathologySpecimen
 from spacy_engine import fuzz
 
 
