@@ -14,8 +14,18 @@ from spacy_engine import fuzz
 # ─────────────────────────────────────────────────────────────────
 def site_match_score(endo_site: str, path_site: str) -> int:
     rectal_sites = {"Rectum", "Upper rectum", "Mid rectum", "Distal rectum"}
+
     if endo_site in rectal_sites and path_site in rectal_sites:
         return 92
+
+    # Rectosigmoid junction is anatomically adjacent to rectum, but not the
+    # same site -- treat as a plausible but lower-confidence match rather
+    # than either a full rectal match (92) or a hard non-match (0).
+    if endo_site == "Rectosigmoid junction" and path_site in rectal_sites:
+        return 80
+    if path_site == "Rectosigmoid junction" and endo_site in rectal_sites:
+        return 80
+
     if (endo_site in rectal_sites) != (path_site in rectal_sites):
         return 0
     if endo_site == "Appendiceal orifice" and path_site in {"Caecum", "Ascending colon"}:

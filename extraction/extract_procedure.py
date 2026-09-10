@@ -56,21 +56,39 @@ def extract_size(text: str) -> str:
     # SIZE CAN BE WRITTEN 3 DIMENSIONALLY, 2 DIMENSIONALLY, AS A RANGE OR AS
     # A SINGLE MEASUREMENT, mm can also appear on either the first, second or last number
     # Range: "4 to 6 mm" or "4-6mm"
-    m = re.search(r'(\d+(?:\.\d+)?)\s*(?:to|-)\s*(\d+(?:\.\d+)?)\s*(mm|cm)', text, re.I)
+
+    # Exclude distance/location phrasing -- these describe position, not
+    # size. Covers "from the anal verge", "FAV" shorthand, and
+    # "proximally"/"distally"/"proximal to"/"distal to" markers. The
+    # optional plural "s" lives INSIDE the lookahead, not as an optional
+    # part of the main unit match -- putting it on the main match let the
+    # regex engine backtrack past it to dodge the exclusion entirely.
+    distance_re = (
+        r'(?:from\s+(?:the\s+)?(?:anal\s+verge|anus|ileocaecal\s+valve|dentate\s+line)'
+        r'|FAV\b'
+        r'|(?:proximally|distally)\b'
+        r'|proximal\s+to|distal\s+to)'
+    )
+
+    m = re.search(
+        rf'(\d+(?:\.\d+)?)\s*(?:to|-)\s*(\d+(?:\.\d+)?)\s*(mm|cm)(?!s?\s*{distance_re})',
+        text, re.I
+    )
     if m:
         lo, hi, unit = float(m.group(1)), float(m.group(2)), m.group(3).lower()
         if unit == "cm":
             lo, hi = lo * 10, hi * 10
         return f"{int(lo)}-{int(hi)}mm"
+
     # Single: "7 mm"
-    m = re.search(r'(\d+(?:\.\d+)?)\s*(mm|cm)', text, re.I)
+    m = re.search(rf'(\d+(?:\.\d+)?)\s*(mm|cm)(?!s?\s*{distance_re})', text, re.I)
     if m:
         val, unit = float(m.group(1)), m.group(2).lower()
         if unit == "cm":
             val *= 10
         return f"{int(val)}mm"
-    return "Not documented"
 
+    return "Not documented"
 
 
 # ─────────────────────────────────────────────────────────────────

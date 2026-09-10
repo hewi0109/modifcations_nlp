@@ -114,8 +114,8 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
     # Insert newline before each new finding sentence
     findings_text = re.sub(
         r'(?<=\.)\s+(?='
-        r'(?:A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}(?:polyp|mass|tumou?r)|'
-        r'(?:A|An)\s+(?:small|large|tiny|minute|diminutive)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:polyp|mass|tumou?r)|'
+        r'(?:A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*(?:mm|cm)\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}(?:polyp|mass|tumou?r)|'
+        r'(?:A|An)\s+(?:small|large|tiny|minute)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*(?:mm|cm)\)?\s+(?:polyp|mass|tumou?r)|'
         r'(?:A|An)\s+colonic\s+(?:tumou?r|mass)|'
         r'(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|\d+)\s+(?:\d+\s*mm\s+)?(?:paris|sessile|flat|pedunculated|polyps?)|'
         r'Biopsies?\s+were\s+taken|'
@@ -254,8 +254,10 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
         site_raw = all_site_mentions[0] if all_site_mentions else (extract_site_raw(block) or "Unknown")
         site_norm, site_conf = normalise(site_raw, FINDING_SITE_VOCAB, threshold=70)
 
+        print(f"[MORPH-CHECK] block={block!r}")
         morph_raw = extract_morphology_raw(block) or "Not documented"
         morph_norm, morph_conf = normalise(morph_raw, FINDING_MORPHOLOGY_VOCAB, threshold=70)
+        print(f"[MORPH-CHECK] morph_raw={morph_raw!r} morph_norm={morph_norm!r}")
 
         count = parse_polyp_count(block)
         size  = extract_size(block)
