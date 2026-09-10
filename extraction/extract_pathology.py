@@ -8,8 +8,6 @@ from patterns.sites import extract_site_raw, SITE_RAW_PATTERNS, dedupe_sites_pre
 from extraction.extract_findings import NEGATION_RE
 
 
-
-
 # ─────────────────────────────────────────────────────────────────
 # STAGE 3: PATHOLOGY EXTRACTOR
 # Extracts per-specimen: site, diagnosis_group, dysplasia, fragment_count
@@ -277,11 +275,23 @@ def should_use_microscopic_specimens(path_note: str, diag_items: list[str], micr
     )
     return grouped_diagnosis or fewer_diag_items_than_micro or multi_site_diag_line
 
+
+def _extract_diagnosis_text(path_note: str) -> str:
+    """Extract the Diagnosis section, preferring the LAST occurrence when a
+    report has multiple (e.g. an interim Diagnosis followed by a
+    Supplementary Report's own revised Diagnosis section). Mirrors the
+    same last-write-wins principle already used for multiple Microscopic
+    headers -- supplementary/addendum sections always come after the
+    original in these reports."""
+    matches = list(re.finditer(r'Diagnosis[:\s]*(.*?)(?:Macroscopic|Microscopic|Comment|$)', path_note, re.I | re.S))
+    if not matches:
+        return path_note
+    return matches[-1].group(1).strip()
+
 def extract_pathology_specimens(path_note: str) -> list[PathologySpecimen]:
     path_note = clean_clinical_text(path_note)
     # Focus on Diagnosis section
-    m = re.search(r'Diagnosis[:\s]*(.*?)(?:Macroscopic|Microscopic|Comment|$)', path_note, re.I | re.S)
-    diag_text = m.group(1).strip() if m else path_note
+    diag_text = _extract_diagnosis_text(path_note)
 
     # Handle both newline-separated AND inline numbered lists
     # e.g. "Diagnosis 1. Caecal polyp... 2. Sigmoid polyp..."
@@ -430,3 +440,18 @@ def extract_pathology_specimens(path_note: str) -> list[PathologySpecimen]:
         ))
 
     return specimens
+
+def wait_for_supplementary(raw_text: str) -> str | None:
+    interim = False
+    resolved = False
+
+    if re.search(r'INTERIM REPORT', raw_text, re.I):
+        interim = True
+
+    if re.search(r'Supplementary Report', raw_text, re.I):
+        resolved = True
+
+    if interim and not resolved:
+        return "Only interim pathology present"
+    else:
+        return None

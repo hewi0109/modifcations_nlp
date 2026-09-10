@@ -4,7 +4,7 @@ from textClean import is_missing_report_text, normalise, is_upper_endoscopy_type
 from vocab import DIAGNOSIS_GROUP_VOCAB, DYSPLASIA_VOCAB, DIAGNOSIS_SEVERITY, DYSPLASIA_SEVERITY
 from difflib import SequenceMatcher
 from extraction.extract_findings import EndoscopyFinding
-from extraction.extract_pathology import PathologySpecimen
+from extraction.extract_pathology import PathologySpecimen, wait_for_supplementary
 from spacy_engine import fuzz
 
 
@@ -439,10 +439,19 @@ def _append_row(
     mixed,
     count_mismatch,
     curation_reason,
-    size_override=None
+    size_override=None,
+    supplementary_flag=None,
 ):
     size = size_override if size_override else ef.size
     diag_group, dysplasia = postprocess_pathology_result(diag_group, dysplasia)
+
+    if path_matched and supplementary_flag:
+        curation_reason = (
+            f"{curation_reason} | {supplementary_flag}"
+            if curation_reason and curation_reason not in ("N/A", "")
+            else supplementary_flag
+        )
+
     manual_curation, curation_reason = manual_curation_decision(
         diag_group=diag_group,
         dysplasia=dysplasia,
@@ -451,6 +460,9 @@ def _append_row(
         count_mismatch=count_mismatch,
         current_reason=curation_reason,
     )
+
+    if path_matched and supplementary_flag:
+        manual_curation = "Yes"
 
     number_categorical = None if ef.finding_type == "Biopsy" else count
 
@@ -490,7 +502,8 @@ def _append_row(
 def merge_findings(
     endo_findings: list[EndoscopyFinding],
     path_specimens: list[PathologySpecimen],
-    CMBSMain: str
+    CMBSMain: str,
+    pathology_report_text: str = "",
 ) -> list[dict]:
 
     """
@@ -500,6 +513,8 @@ def merge_findings(
     - Same site + same diagnosis → 1 row
     - Different diagnoses at same site → split rows
     """
+
+    supplementary_flag = wait_for_supplementary(pathology_report_text)
 
     # If no endoscopy findings but pathology has specimens → pathology-only rows
     if not endo_findings and path_specimens:
@@ -524,6 +539,12 @@ def merge_findings(
             if not is_polyp_case:
                 inferred_count = None
 
+            base_reason = (
+                "Pathology-only polyp finding — no endoscopy finding extracted"
+                if is_polyp_case
+                else "Biopsy-only procedure — no endoscopy polyp findings"
+            )
+
             rows.append({
                 "finding_id":                        f"F-{str(uuid.uuid4())[:6].upper()}",
                 "CMBSMain":                      CMBSMain,
@@ -544,11 +565,7 @@ def merge_findings(
                 "hedged":                            "No",
                 "hedge_type":                        "N/A",
                 "manual_curation":                   "Yes",
-                "curation_reason": (
-                    "Pathology-only polyp finding — no endoscopy finding extracted"
-                    if is_polyp_case
-                    else "Biopsy-only procedure — no endoscopy polyp findings"
-                ),
+                "curation_reason": f"{base_reason} | {supplementary_flag}" if supplementary_flag else base_reason,
                 "urgent_flag":                       "No",
                 "extraction_discrepancy_flag":        "Yes",
             })
@@ -729,6 +746,13 @@ def merge_findings(
         if ps.specimen_type != "Biopsy" and not pathology_implies_polyp(diag_norm, ps.raw_text):
             continue
         is_polyp_case = ps.specimen_type != "Biopsy"
+
+        base_reason = (
+            "Pathology-only polyp finding — no matching endoscopy row"
+            if is_polyp_case
+            else "Biopsy-only pathology specimen — no matching endoscopy row"
+        )
+
         rows.append({
             "finding_id": f"F-{str(uuid.uuid4())[:6].upper()}",
             "CMBSMain": CMBSMain,
@@ -750,11 +774,7 @@ def merge_findings(
             "hedged": "No",
             "hedge_type": "N/A",
             "manual_curation": "Yes",
-            "curation_reason": (
-                "Pathology-only polyp finding — no matching endoscopy row"
-                if is_polyp_case
-                else "Biopsy-only pathology specimen — no matching endoscopy row"
-            ),
+            "curation_reason": f"{base_reason} | {supplementary_flag}" if supplementary_flag else base_reason,
             "urgent_flag": "No",
             "extraction_discrepancy_flag": "Yes",
         })

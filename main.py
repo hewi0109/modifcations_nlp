@@ -458,7 +458,7 @@ def run_batch_data(
             else:
                 findings = extract_endoscopy_findings(nlp_endo) if not no_endoscopy_report else []
                 specs = extract_pathology_specimens(path) if path.strip() else []
-                finding_rows = merge_findings(findings, specs, procedure_id)
+                finding_rows = merge_findings(findings, specs, procedure_id, pathology_report_text=path)
             source_findings = source_finding_lookup.get(procedure_id, [])
             assign_procedure_finding_ids(finding_rows, source_findings)
 
