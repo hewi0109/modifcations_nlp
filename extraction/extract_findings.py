@@ -254,10 +254,8 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
         site_raw = all_site_mentions[0] if all_site_mentions else (extract_site_raw(block) or "Unknown")
         site_norm, site_conf = normalise(site_raw, FINDING_SITE_VOCAB, threshold=70)
 
-        print(f"[MORPH-CHECK] block={block!r}")
         morph_raw = extract_morphology_raw(block) or "Not documented"
         morph_norm, morph_conf = normalise(morph_raw, FINDING_MORPHOLOGY_VOCAB, threshold=70)
-        print(f"[MORPH-CHECK] morph_raw={morph_raw!r} morph_norm={morph_norm!r}")
 
         count = parse_polyp_count(block)
         size  = extract_size(block)
