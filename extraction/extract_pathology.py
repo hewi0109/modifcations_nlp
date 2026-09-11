@@ -287,8 +287,17 @@ def _extract_diagnosis_text(path_note: str) -> str:
     Supplementary Report's own revised Diagnosis section). Mirrors the
     same last-write-wins principle already used for multiple Microscopic
     headers -- supplementary/addendum sections always come after the
-    original in these reports."""
-    matches = list(re.finditer(r'Diagnosis[:\s]*(.*?)(?:Macroscopic|Microscopic|Comment|$)', path_note, re.I | re.S))
+    original in these reports.
+
+    Case-sensitive match on purpose: genuine section headings are always
+    capitalised ("Diagnosis"), while the word can also appear lowercase
+    mid-sentence in ordinary narrative text (e.g. "no support for the
+    diagnosis"). Matching case-insensitively let a stray in-sentence use
+    of the word outrank the real heading when it happened to appear later
+    in the document -- confirmed with a real report where this caused the
+    entire correct diagnosis section to be discarded.
+    """
+    matches = list(re.finditer(r'Diagnosis[:\s]*(.*?)(?:Macroscopic|Microscopic|Comment|$)', path_note, re.S))
     if not matches:
         return path_note
     return matches[-1].group(1).strip()
