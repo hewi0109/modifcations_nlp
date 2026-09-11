@@ -37,10 +37,15 @@ DIAG_PATTERNS = [
         r'normal\s+colonic\s+mucosa|'
         r'colonic\s+mucosa\s+within\s+normal\s+limits|'
         r'mild\s+architectural\s+distortion|'
-        r'biopsy\s*:\s*normal\b|'
-        r'(?:^|\s*)normal\.?\s*(?:$|\s)',
+        r'biopsy\s*:\s*normal\b',
         re.I), "Normal tissue"),
         ]
+
+def is_bare_normal_statement(text: str) -> bool:
+    """True only when the text, once stripped of whitespace/trailing period,
+    is literally just the word 'normal' -- not merely containing it
+    somewhere, e.g. 'Normal result:' from an ancillary IHC block."""
+    return text.strip().rstrip('.').strip().lower() == "normal"
 
 DYSPLASIA_PATTERNS = [
     # Adenocarcinoma-level — most specific first

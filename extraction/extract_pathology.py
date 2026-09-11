@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from textClean import clean_clinical_text, normalise, fuzzy_phrase_present
 import re
-from patterns.diagnosis import COLITIS_FAMILY_PATTERNS, DIAG_PATTERNS, DYSPLASIA_PATTERNS
+from patterns.diagnosis import COLITIS_FAMILY_PATTERNS, DIAG_PATTERNS, DYSPLASIA_PATTERNS, is_bare_normal_statement
 from spacy_engine import SPACY_ENGINE
 from vocab import DIAGNOSIS_GROUP_VOCAB, DYSPLASIA_VOCAB, FINDING_SITE_VOCAB, UPPER_GI_SITES
 from patterns.sites import extract_site_raw, SITE_RAW_PATTERNS, dedupe_sites_preferring_specific
@@ -58,6 +58,9 @@ def extract_diagnosis(text: str) -> str:
     colitis_label = colitis_family_diagnosis(t)
     if colitis_label:
         return colitis_label
+
+    if is_bare_normal_statement(t):
+        return "Normal tissue"
 
     # First use exact/regex rules. These remain the safest when the phrase is clear.
     for pat, label in DIAG_PATTERNS:
@@ -142,6 +145,8 @@ def extract_diagnosis_groups(text: str) -> list[str]:
     colitis_label = colitis_family_diagnosis(t)
     if colitis_label:
         labels.append(colitis_label)
+    if is_bare_normal_statement(t):
+        labels.append("Normal tissue")
     for pat, label in DIAG_PATTERNS:
         if pat.search(t) and label not in labels:
             labels.append(label)
