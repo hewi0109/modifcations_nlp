@@ -80,8 +80,7 @@ def isolate_relevant_endoscopy_text(note: str, procedure_type: str = "") -> str:
 
     heading_re = re.compile(
         r'(?im)^\s*(?:[-=]+\s*)?(?P<title>'
-        r'(?:Upper\s+GI\s+Endoscopy|Gastroscopy|Oesophago.*?duodenoscopy|Esophago.*?duodenoscopy|EGD|'
-        r'Colonoscopy|Flexible\s+Sigmoid(?:o)?scopy|Flexible\s+Colonoscopy)'
+        r'(?:Upper\s+GI\s+Endoscopy|Gastroscopy|Oesophago.*?duodenoscopy|Esophago.*?duodenoscopy|EGD)'
         r'(?:\s+Report|\s+Procedure\s+Report)?)\s*:?\s*(?:[-=]+)?\s*$'
     )
     headings = [(m.start(), m.end(), m.group("title")) for m in heading_re.finditer(text)]
@@ -95,10 +94,12 @@ def isolate_relevant_endoscopy_text(note: str, procedure_type: str = "") -> str:
 
     def chunk_kind(chunk_text: str, heading_title: str | None) -> str:
         if heading_title is not None:
-            return "colorectal" if re.search(r'\b(?:colon|sigmoid)\b', heading_title, re.I) else "upper"
-        if re.search(r'\bProcedure\s*:?\s*(?:Colonoscopy|Flexible\s+Sigmoid(?:o)?scopy|Flexible\s+Colonoscopy)\b', chunk_text, re.I):
+            return "upper"
+        if re.search(r'\bProcedure\s*:?\s*(?:Colonoscopy|Flexible\s+Sigmoid(?:o)?scopy|Flexible\s+Colonoscopy)\b',
+                     chunk_text, re.I):
             return "colorectal"
-        if re.search(r'\bProcedure\s*:?\s*(?:Upper\s+GI\s+Endoscopy|Gastroscopy|Oesophago|Esophago|EGD)\b', chunk_text, re.I):
+        if re.search(r'\bProcedure\s*:?\s*(?:Upper\s+GI\s+Endoscopy|Gastroscopy|Oesophago|Esophago|EGD)\b', chunk_text,
+                     re.I):
             return "upper"
         return "unknown"
 
