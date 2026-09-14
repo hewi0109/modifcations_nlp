@@ -595,7 +595,7 @@ def merge_findings(
                 rows, ef, CMBSMain,
                 count=ef.count,
                 diag_group="Not retrieved",
-                dysplasia="Not retrieved",
+                dysplasia="N/A",
                 path_matched=False,
                 best_specimen=None,
                 best_score=0,
@@ -632,7 +632,7 @@ def merge_findings(
         if not path_matched:
             if ef.completeness == "Not retrieved":
                 endo_diag = "Not retrieved"
-                endo_dys = "Not retrieved"
+                endo_dys = "N/A"
             else:
             # Supervisor feedback (1497976): if the endoscopist explicitly
             # calls unretrieved polyps hyperplastic, preserve that as the best
