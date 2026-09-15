@@ -525,6 +525,22 @@ def extract_incomplete_reason(note_clean: str, difficulty_reason: str, prep_qual
             deduped.append(reason)
     return "; ".join(deduped) if deduped else ""
 
+def strip_indications_section(text: str) -> str:
+    """Remove the Indications field before bowel-prep-quality inference, so
+    history/context text (e.g. 'inadequate bowel prep at last colonoscopy')
+    isn't misread as describing the current procedure's prep.
+
+    note_clean is already flattened (newlines collapsed to spaces) by the
+    time this runs, so the removal can't rely on finding a literal '\\n' to
+    know where Indications ends -- confirmed this exact issue: the original
+    version fell through to end-of-string and deleted everything after
+    Indications, including the Findings section. It now stops at the next
+    recognised field label instead."""
+    return re.sub(
+        r'Indications:.*?(?=\b(?:Providers|Medications|Procedure|Findings|Impression|'
+        r'Recommendation|Complications|Scope Withdrawal)\s*:|\Z)',
+        ' ', text, flags=re.I | re.S
+    )
 
 def extract_procedure(note: str, CMBSMain: str) -> dict:
     if is_missing_report_text(note):
@@ -681,6 +697,7 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
     # ── Bowel prep quality ───────────────────────────────────────
     # Only use explicit quality wording. DO NOT infer from BBPS.
     prep_quality_raw = "Not reported"
+    note_clean_no_indications = strip_indications_section(note_clean)
 
     explicit_quality_patterns = [
         r'\bbowel prep(?:aration)? (?:was|is)\s+(excellent|good|adequate|fair|poor|inadequate|unsatisfactory)\b',
@@ -690,10 +707,17 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
     ]
 
     for pat in explicit_quality_patterns:
-        m = re.search(pat, note_clean, re.I)
+        m = re.search(pat, note_clean_no_indications, re.I)
         if m:
             prep_quality_raw = m.group(1).capitalize()
             break
+
+     # "Borderline" bowel prep is treated as Fair -- it's not one of the
+     # standard quality words itself, but reports use it to mean the same
+     # thing as a fair/marginal prep.
+    if prep_quality_raw.lower() == "not reported" and re.search(r'\bborderline bowel prep(?:aration)?\b',
+        note_clean_no_indications, re.I):
+        prep_quality_raw = "Fair"
 
     # ── Bowel prep given ─────────────────────────────────────────
     prep_given = "Not documented"
@@ -803,12 +827,12 @@ def extract_procedure(note: str, CMBSMain: str) -> dict:
     # preparation/visualisation or a well visualised colon.
     if prep_quality_raw.lower() == "not reported":
         if (
-            re.search(r'\b(?:bowel prep(?:aration)?\s+was\s+)?not good\b', note_clean, re.I)
-            or re.search(r'\binadequate bowel prep(?:aration)?\b|\bpoor endoscopic visuali[sz]ation\b', note_clean, re.I)
+            re.search(r'\b(?:bowel prep(?:aration)?\s+was\s+)?not good\b', note_clean_no_indications, re.I)
+            or re.search(r'\binadequate bowel prep(?:aration)?\b|\bpoor endoscopic visuali[sz]ation\b', note_clean_no_indications, re.I)
             or total_bbps == "0"
         ):
             prep_quality_raw = "Poor"
-        elif re.search(r'\bentire colon was well visuali[sz]ed\b', note_clean, re.I):
+        elif re.search(r'\bentire colon was well visuali[sz]ed\b', note_clean_no_indications, re.I):
             prep_quality_raw = "Good"
 
     prep_quality, _ = normalise(prep_quality_raw, BOWEL_PREP_QUALITY_VOCAB)
