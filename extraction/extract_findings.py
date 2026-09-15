@@ -114,6 +114,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
     # Insert newline before each new finding sentence
     findings_text = re.sub(
         r'(?<=\.)\s+(?='
+        r'(?:A|An)\s+(?:[A-Za-z][A-Za-z/-]*\s+){1,6}mass\s+(?:was|were)\s+found\b|'
         r'(?:A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*(?:mm|cm)\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}(?:polyp|mass|tumou?r)|'
         r'(?:A|An)\s+(?:small|large|tiny|minute)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*(?:mm|cm)\)?\s+(?:polyp|mass|tumou?r)|'
         r'(?:A|An)\s+colonic\s+(?:tumou?r|mass)|'
@@ -158,6 +159,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
             # New finding starts with these patterns
             is_new_finding = bool(re.match(
                 r'^(?:A\s+\d|An?\s+\d|An?\s+(?:small|large|tiny|diminutive)\s+\(?\d|\d+\s+(?:polyp|sessile|flat)|'
+                r'(?:A|An)\s+(?:[A-Za-z][A-Za-z/-]*\s+){1,6}mass\s+(?:was|were)\s+found\b|'
                 r'(?:one|two|three|four|five|six|seven|eight|nine|ten)'
                 r'\s+(?:(?:hyperplastic|sessile|flat|pedunculated|small|tiny|other|diminutive)\s+){0,5}(?:paris|sessile|flat|pedunculated|polyps?|[0-9]|\d)|'
                 r'(?:(?:Multiple|Several|Many)|A\s+(?:sessile|flat|pedunculated|mass|colonic\s+(?:tumou?r|mass))))',
