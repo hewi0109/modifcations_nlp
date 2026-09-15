@@ -474,7 +474,9 @@ def _append_row(
     if path_matched and supplementary_flag:
         manual_curation = "Yes"
 
-    number_categorical = None if ef.finding_type == "Biopsy" else count
+    is_biopsy = ef.finding_type == "Biopsy" or (best_specimen is not None and best_specimen.specimen_type == "Biopsy")
+    number_categorical = None if is_biopsy else count
+    intervention_performed = "Biopsy only" if is_biopsy else ef.intervention
 
     # A successful pathology match is direct proof this specimen was
     # retrieved -- overrides a "Not retrieved" completeness value that was
@@ -491,7 +493,7 @@ def _append_row(
         "finding_morphology": ef.morphology,
         "number_categorical": number_categorical,
         "size_mm": size,
-        "finding_intervention_performed": ef.intervention,
+        "finding_intervention_performed": intervention_performed,
         "finding_intervention_completeness": completeness,
         "type": ef.finding_type,
         "diagnosis_group": diag_group,
@@ -530,7 +532,7 @@ def merge_findings(
     if not endo_findings and path_specimens:
         rows = []
         for ps in path_specimens:
-            if ps.specimen_type == "Biopsy" and ps.site_norm == "Unknown":
+            if ps.site_norm == "Unknown":
                 continue
             diag, dys = ps.diagnoses[0][0], ps.diagnoses[0][1]
             diag_norm, _ = normalise(diag, DIAGNOSIS_GROUP_VOCAB, threshold=65)
@@ -594,7 +596,7 @@ def merge_findings(
             _append_row(
                 rows, ef, CMBSMain,
                 count=ef.count,
-                diag_group="Not retrieved",
+                diag_group="Unspecified polyp - polyp not retrieved",
                 dysplasia="N/A",
                 path_matched=False,
                 best_specimen=None,
@@ -631,7 +633,7 @@ def merge_findings(
 
         if not path_matched:
             if ef.completeness == "Not retrieved":
-                endo_diag = "Not retrieved"
+                endo_diag = "Unspecified polyp - polyp not retrieved"
                 endo_dys = "N/A"
             else:
             # Supervisor feedback (1497976): if the endoscopist explicitly

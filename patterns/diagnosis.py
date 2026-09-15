@@ -35,6 +35,7 @@ DIAG_PATTERNS = [
         r'no\s+serrated\s+polyp.*no.*dysplas|degenerate\s+fragment|'
         r'within\s+normal\s+(?:histological\s+)?limits|normal\s+histolog|'
         r'normal\s+colonic\s+mucosa|'
+        r'within\s+normal\s+(?:morphological\s+)?limits|normal\s+morpholog|'
         r'colonic\s+mucosa\s+within\s+normal\s+limits|'
         r'mild\s+architectural\s+distortion|'
         r'biopsy\s*:\s*normal\b',
