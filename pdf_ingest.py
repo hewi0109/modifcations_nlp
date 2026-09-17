@@ -4,7 +4,7 @@ PDF report processing v1
 
 Convert private-clinic / external-facility PDF endoscopy reports into the same
 Procedure, Findings, and Indications Excel output produced by
-pipeline_v11_spacy_fixed.py.
+main.
 
 The script first tries embedded PDF text. If the PDF is scanned/image-only, it
 uses OCR via Tesseract after rendering pages with pdftoppm.
@@ -22,12 +22,17 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-DEFAULT_OUTPUT = "/Users/mahmed06/NLP/pdf_extraction_v1.xlsx"
-BUNDLED_PDFTOPPM = (
-    "/Users/mahmed06/NLP/"
-    "dependencies/bin/pdftoppm"
-)
+from textClean import is_missing_report_text
+from extraction.extract_procedure import extract_procedure, extract_other_findings
+from extraction.extract_findings import extract_endoscopy_findings
+from extraction.extract_pathology import extract_pathology_specimens
+from merge import (merge_findings, build_indication_rows, apply_procedure_type_overrides,
+                   annotate_finding_row_flags)
+from excel_out import build_excel_multi
 
+
+DEFAULT_OUTPUT = "data/output/pdf_extraction.xlsx"
+BUNDLED_PDFTOPPM = ""
 
 class PdfTextExtractionError(RuntimeError):
     """Raised when a PDF cannot be converted into report text."""
