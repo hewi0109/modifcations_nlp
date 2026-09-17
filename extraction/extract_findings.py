@@ -122,6 +122,10 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
         r'Biopsies?\s+were\s+taken|'
         r'(?:Multiple|Several|Many)\s+(?:sessile|semi-pedunculated|flat|pedunculated|polyps?)|'
         r'The\s+retroflexed?\s+view|'
+        r'(?:One|A|An)\s+(?:suture\s+)?granuloma\s+was\s+found|'
+        r'(?:One|A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*(?:mm|cm)\s+(?:submucosal\s+)?nodule\s+was\s+found|'
+        r'(?:Multiple|Several|Many|Few)\s+(?:small.mouthed\s+)?diverticula\s+(?:were|was)\s+found|'
+        r'(?:Few|Several|Multiple|Many)\s+(?:diminutive\s+)?\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*(?:mm|cm)\)?\s+polyps?\s+(?:were|was)\s+found|'
         r'Internal\s+haemorrhoids?\s+were\s+found'
         r')',
         '\n', findings_text, flags=re.I
@@ -160,7 +164,12 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
             is_new_finding = bool(re.match(
                 r'^(?:A\s+\d|An?\s+\d|An?\s+(?:small|large|tiny|diminutive)\s+\(?\d|\d+\s+(?:polyp|sessile|flat)|'
                 r'(?:A|An)\s+(?:[A-Za-z][A-Za-z/-]*\s+){1,6}mass\s+(?:was|were)\s+found\b|'
+                r'(?:One|A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*(?:mm|cm)\s+(?:mucosal\s+)?nodule\s+was\s+found|'
+                r'(?:Multiple|Several|Many|Few)\s+(?:small.mouthed\s+)?diverticula\s+(?:were|was)\s+found|'
+                r'(?:Few|Several|Multiple|Many)\s+(?:diminutive\s+)?\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*(?:mm|cm)\)?\s+polyps?\s+(?:were|was)\s+found|'
                 r'(?:one|two|three|four|five|six|seven|eight|nine|ten)'
+                r'(?:One|A|An)\s+(?:suture\s+)?granuloma\s+was\s+found|'
+                r'(?:One|A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*(?:mm|cm)\s+(?:submucosal\s+)?nodule\s+was\s+found|'
                 r'\s+(?:(?:hyperplastic|sessile|flat|pedunculated|small|tiny|other|diminutive)\s+){0,5}(?:paris|sessile|flat|pedunculated|polyps?|[0-9]|\d)|'
                 r'(?:(?:Multiple|Several|Many)|A\s+(?:sessile|flat|pedunculated|mass|colonic\s+(?:tumou?r|mass))))',
                 line, re.I

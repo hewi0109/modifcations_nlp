@@ -486,6 +486,20 @@ def _append_row(
     if path_matched and completeness == "Not retrieved":
         completeness = "Complete"
 
+    # A finding cannot logically be both "Not excised" and "Complete" --
+    # this combination is almost always caused by two distinct findings
+    # merging into one text block during extraction. Checked against the
+    # FINAL values above (post biopsy/retrieval overrides), since those are
+    # what actually gets shown to the reviewer.
+    if intervention_performed == "Not excised" and completeness == "Complete":
+        conflict_reason = "Intervention/completeness mismatch — 'Not excised' with 'Complete' outcome, verify against source text"
+        curation_reason = (
+            f"{curation_reason} | {conflict_reason}"
+            if curation_reason and curation_reason not in ("N/A", "")
+            else conflict_reason
+        )
+        manual_curation = "Yes"
+
     rows.append({
         "finding_id": f"F-{str(uuid.uuid4())[:6].upper()}",
         "CMBSMain": CMBSMain,
