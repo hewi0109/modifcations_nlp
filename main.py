@@ -2,7 +2,7 @@ import uuid
 import re
 from textClean import is_missing_report_text, isolate_relevant_endoscopy_text, _match_text
 from extraction.extract_procedure import (apply_procedure_finding_terms, extract_procedure, resolve_procedure_date,
-                                          impression_has_no_specimens_collected)
+                                          impression_has_no_specimens_collected, resolve_procedure_type, extract_procedure_type_from_text)
 from extraction.extract_findings import extract_endoscopy_findings
 from extraction.extract_pathology import extract_pathology_specimens
 from merge import (merge_findings, apply_no_pathology_report_to_finding,
@@ -425,11 +425,12 @@ def run_batch_data(
             registration_id = "" if pd.isna(row["registration_id"]) else str(row["registration_id"]).strip()
             procedure_id = _clean_identifier(row["procedure_id"])
             procedure_finding_id = "" if pd.isna(row["procedure_finding_id"]) else str(row["procedure_finding_id"]).strip()
-            procedure_date = "" if pd.isna(row["procedure_date"]) else str(row["procedure_date"]).strip()
-            procedure_type = "" if pd.isna(row["procedure_type"]) else str(row["procedure_type"]).strip()
             procedure_location = "" if pd.isna(row["procedure_location"]) else str(row["procedure_location"]).strip()
             endo = "" if pd.isna(row["endoscopy_report_text"]) else str(row["endoscopy_report_text"])
             path = "" if pd.isna(row["pathology_report_text"]) else str(row["pathology_report_text"])
+            procedure_date = "" if pd.isna(row["procedure_date"]) else str(row["procedure_date"]).strip()
+            procedure_type = "" if pd.isna(row["procedure_type"]) else str(row["procedure_type"]).strip()
+            procedure_type = resolve_procedure_type(extract_procedure_type_from_text(endo), procedure_type)
             no_endoscopy_report = is_missing_report_text(endo)
             upper_gi_only = is_upper_endoscopy_type(procedure_type)
             nlp_endo = isolate_relevant_endoscopy_text(endo, procedure_type)
@@ -458,14 +459,14 @@ def run_batch_data(
             else:
                 findings = extract_endoscopy_findings(nlp_endo) if not no_endoscopy_report else []
                 specs = extract_pathology_specimens(path) if path.strip() else []
-                finding_rows = merge_findings(findings, specs, procedure_id, pathology_report_text=path)
+                finding_rows = merge_findings(findings, specs, procedure_id, procedure_date=proc["procedure_date"], procedure_type=procedure_type, pathology_report_text=path)
             source_findings = source_finding_lookup.get(procedure_id, [])
             assign_procedure_finding_ids(finding_rows, source_findings)
 
             for fr in finding_rows:
                 fr["procedure_id"] = procedure_id
                 fr["registration_id"] = registration_id
-                fr["procedure_date"] = procedure_date
+                fr["procedure_date"] = resolve_procedure_date(proc.get("report_date", ""), procedure_date)
                 fr["procedure_type"] = procedure_type
                 fr["procedure_location"] = procedure_location
                 fr["pathology_report_text"] = path

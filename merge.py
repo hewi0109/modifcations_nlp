@@ -437,20 +437,22 @@ def apply_no_pathology_report_to_finding(row: dict) -> dict:
 
 
 def _append_row(
-    rows,
-    ef,
-    CMBSMain,
-    count,
-    diag_group,
-    dysplasia,
-    path_matched,
-    best_specimen,
-    best_score,
-    mixed,
-    count_mismatch,
-    curation_reason,
-    size_override=None,
-    supplementary_flag=None,
+        rows,
+        ef,
+        CMBSMain,
+        count,
+        diag_group,
+        dysplasia,
+        path_matched,
+        best_specimen,
+        best_score,
+        mixed,
+        count_mismatch,
+        curation_reason,
+        procedure_date,
+        procedure_type,
+        size_override=None,
+        supplementary_flag=None,
 ):
     size = size_override if size_override else ef.size
     diag_group, dysplasia = postprocess_pathology_result(diag_group, dysplasia)
@@ -503,6 +505,8 @@ def _append_row(
     rows.append({
         "finding_id": f"F-{str(uuid.uuid4())[:6].upper()}",
         "CMBSMain": CMBSMain,
+        "procedure_date": procedure_date,
+        "procedure_type": procedure_type,
         "site": ef.site,
         "finding_morphology": ef.morphology,
         "number_categorical": number_categorical,
@@ -529,6 +533,8 @@ def merge_findings(
     endo_findings: list[EndoscopyFinding],
     path_specimens: list[PathologySpecimen],
     CMBSMain: str,
+    procedure_date: str = "",
+    procedure_type: str = "",
     pathology_report_text: str = "",
 ) -> list[dict]:
 
@@ -573,7 +579,9 @@ def merge_findings(
 
             rows.append({
                 "finding_id":                        f"F-{str(uuid.uuid4())[:6].upper()}",
-                "CMBSMain":                      CMBSMain,
+                "CMBSMain":                          CMBSMain,
+                "procedure_date":                    procedure_date,
+                "procedure_type":                    procedure_type,
                 "site":                              ps.site_norm,
                 "finding_morphology":                "Not documented",
                 "number_categorical":                inferred_count,
@@ -617,7 +625,9 @@ def merge_findings(
                 best_score=0,
                 mixed=False,
                 count_mismatch=False,
-                curation_reason="Not excised — left in situ, no pathology expected"
+                curation_reason="Not excised — left in situ, no pathology expected",
+                procedure_date=procedure_date,
+                procedure_type=procedure_type,
             )
             continue
 
@@ -665,7 +675,9 @@ def merge_findings(
                 best_score=0,
                 mixed=False,
                 count_mismatch=False,
-                curation_reason="No pathology match"
+                curation_reason="No pathology match",
+                procedure_date=procedure_date,
+                procedure_type=procedure_type,
             )
             continue
 
@@ -707,7 +719,9 @@ def merge_findings(
                 best_score=best_score,
                 mixed=False,
                 count_mismatch=count_mismatch,
-                curation_reason=curation_reason
+                curation_reason=curation_reason,
+                procedure_date=procedure_date,
+                procedure_type=procedure_type,
             )
         else:
             sorted_diags = sorted(
@@ -749,7 +763,9 @@ def merge_findings(
                     mixed=True,
                     count_mismatch=count_mismatch,
                     curation_reason=curation_reason,
-                    size_override=ef.size
+                    size_override=ef.size,
+                    procedure_date=procedure_date,
+                    procedure_type=procedure_type,
                 )
                 remaining_polyps -= group_count
 
@@ -782,6 +798,8 @@ def merge_findings(
         rows.append({
             "finding_id": f"F-{str(uuid.uuid4())[:6].upper()}",
             "CMBSMain": CMBSMain,
+            "procedure_date": procedure_date,
+            "procedure_type": procedure_type,
             "site": ps.site_norm,
             "finding_morphology": "Not documented",
             "number_categorical": ((ps.fragment_count_total if 0 < ps.fragment_count_total < 99 else 1)

@@ -303,6 +303,40 @@ PROCEDURE_DATE_RE = re.compile(
     re.I
 )
 
+PROCEDURE_TYPE_RE = re.compile(r'^Procedure:\s*(.+?)\s*$', re.M)
+
+def extract_procedure_type_from_text(note: str) -> str:
+    """Extract the procedure type (e.g. 'Colonoscopy', 'Flexible
+    Sigmoidoscopy', 'Upper GI endoscopy') from the report's own leading
+    'Procedure:' field -- the short type-only line at the top of the
+    report, distinct from the later 'Procedure:' field that introduces
+    the long narrative paragraph. Only the FIRST match is used, since
+    that's always the type field in these reports."""
+    if is_missing_report_text(note):
+        return ""
+    text = re.sub(r'_?x000D_|_?x000A_|\r', '\n', str(note), flags=re.I)
+    m = PROCEDURE_TYPE_RE.search(text)
+    if not m:
+        return ""
+    value = m.group(1).strip()
+    # Guard against matching the long narrative field if formatting ever
+    # puts it first -- the type field is always short; the narrative
+    # always starts with "After informed consent...".
+    if len(value) > 60 or value.lower().startswith("after"):
+        return ""
+    return value
+
+
+def resolve_procedure_type(extracted_type: str, source_type) -> str:
+    """Use the procedure type printed in the report; fall back to the
+    source column, matching the same pattern as resolve_procedure_date."""
+    extracted = str(extracted_type or "").strip()
+    if extracted:
+        return extracted
+    source = str(source_type or "").strip()
+    return source if source else "Not documented"
+
+
 def extract_report_date(note: str) -> str:
     """Extract 'Procedure Date: D/M/YYYY' from the report header
 
