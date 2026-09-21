@@ -1,13 +1,16 @@
 """
-PDF report processing v1
-========================
+PDF report processing
+=====================
 
-Convert private-clinic / external-facility PDF endoscopy reports into the same
-Procedure, Findings, and Indications Excel output produced by
-main.
+Convert private-clinic / external-facility PDF reports into the same Procedure,
+Findings, and Indications Excel output produced by main.py.
 
-The script first tries embedded PDF text. If the PDF is scanned/image-only, it
-uses OCR via Tesseract after rendering pages with pdftoppm.
+Endoscopy and pathology always arrive in the same PDF, so the extracted text is
+passed to both extractors.
+
+The script first tries embedded PDF text. If the PDF is scanned/image-only, or
+the text layer is missing the section headers the extractors need, it falls back
+to OCR via Tesseract after rendering pages with pdftoppm.
 """
 
 from __future__ import annotations
@@ -34,23 +37,31 @@ from excel_out import build_excel_multi
 DEFAULT_OUTPUT = "data/output/pdf_extraction.xlsx"
 BUNDLED_PDFTOPPM = ""
 
+
 class PdfTextExtractionError(RuntimeError):
     """Raised when a PDF cannot be converted into report text."""
 
 
-def clean_identifier(value: object) -> str:
-    text = "" if value is None else str(value).strip()
-    text = re.sub(r"\.0$", "", text)
-    return text
-
-
 def normalize_report_text(text: str) -> str:
-    """Normalize PDF/OCR text enough for the existing v11 extractor."""
+    """Normalize PDF/OCR text enough for the extraction stages."""
     text = str(text or "")
     text = re.sub(r"_x000D_|_x000A_|\r", "\n", text, flags=re.I)
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
+
+REQUIRED_SECTIONS = (r'\bFindings?\s*:', r'\bImpression\s*:')
+
+
+def looks_like_full_report(text: str) -> bool:
+    """True when the text contains the section headers the extractor needs.
+
+    Some scanned PDFs carry a small digital header stamped on top of the image.
+    A character count alone would accept that header as a full report and
+    silently produce a row of "Not documented", so the headers are checked too.
+    """
+    return all(re.search(p, text, re.I) for p in REQUIRED_SECTIONS)
 
 
 def read_embedded_pdf_text(pdf_path: Path) -> str:
@@ -69,13 +80,19 @@ def read_embedded_pdf_text(pdf_path: Path) -> str:
 
 def find_pdftoppm(explicit_path: Optional[str] = None) -> Optional[str]:
     if explicit_path:
-        return explicit_path
+        return explicit_path if Path(explicit_path).exists() else None
     found = shutil.which("pdftoppm")
     if found:
         return found
-    if Path(BUNDLED_PDFTOPPM).exists():
+    if BUNDLED_PDFTOPPM and Path(BUNDLED_PDFTOPPM).exists():
         return BUNDLED_PDFTOPPM
     return None
+
+
+def find_tesseract(explicit_path: Optional[str] = None) -> Optional[str]:
+    if explicit_path:
+        return explicit_path if Path(explicit_path).exists() else None
+    return shutil.which("tesseract")
 
 
 def ocr_pdf_with_tesseract(
@@ -85,9 +102,10 @@ def ocr_pdf_with_tesseract(
     pdftoppm_path: Optional[str] = None,
     dpi: int = 300,
     lang: str = "eng",
+    psm: str = "6",
 ) -> str:
     """OCR image-only PDFs using pdftoppm + Tesseract."""
-    tesseract = tesseract_path or shutil.which("tesseract")
+    tesseract = find_tesseract(tesseract_path)
     pdftoppm = find_pdftoppm(pdftoppm_path)
 
     missing = []
@@ -97,10 +115,11 @@ def ocr_pdf_with_tesseract(
         missing.append("tesseract")
     if missing:
         raise PdfTextExtractionError(
-            "This PDF appears to be scanned/image-only, but OCR tools are missing: "
+            "This PDF appears to be scanned/image-only, but OCR tools are missing "
+            "or the given path does not exist: "
             + ", ".join(missing)
-            + ". Install Tesseract OCR and Poppler, or provide pre-OCR text with "
-            "--endoscopy-text-file."
+            + ". Install Tesseract OCR and Poppler and put them on PATH, or provide "
+            "pre-OCR text with --endoscopy-text-file."
         )
 
     with tempfile.TemporaryDirectory(prefix="pdf_report_ocr_") as tmp:
@@ -111,6 +130,8 @@ def ocr_pdf_with_tesseract(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            encoding="utf-8",
+            errors="replace",
         )
 
         page_images = sorted(Path(tmp).glob("page-*.png"))
@@ -120,11 +141,13 @@ def ocr_pdf_with_tesseract(
         page_texts = []
         for image_path in page_images:
             result = subprocess.run(
-                [tesseract, str(image_path), "stdout", "-l", lang, "--psm", "6"],
+                [tesseract, str(image_path), "stdout", "-l", lang, "--psm", psm],
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
             )
             page_texts.append(result.stdout)
 
@@ -140,6 +163,7 @@ def extract_pdf_text(
     pdftoppm_path: Optional[str] = None,
     ocr_dpi: int = 300,
     ocr_lang: str = "eng",
+    ocr_psm: str = "6",
 ) -> tuple[str, str]:
     """Return (text, method) from embedded text or OCR."""
     path = Path(pdf_path).expanduser().resolve()
@@ -148,7 +172,8 @@ def extract_pdf_text(
 
     if not force_ocr:
         embedded = read_embedded_pdf_text(path)
-        if len(re.sub(r"\s+", "", embedded)) >= min_text_chars:
+        if (len(re.sub(r"\s+", "", embedded)) >= min_text_chars
+                and looks_like_full_report(embedded)):
             return embedded, "embedded_text"
 
     ocr_text = ocr_pdf_with_tesseract(
@@ -157,6 +182,7 @@ def extract_pdf_text(
         pdftoppm_path=pdftoppm_path,
         dpi=ocr_dpi,
         lang=ocr_lang,
+        psm=ocr_psm,
     )
     return ocr_text, "ocr_tesseract"
 
@@ -191,6 +217,7 @@ def extract_pdf_metadata(endo_text: str, pdf_path: Path, explicit_procedure_id: 
     if re.search(r"\bAfter obtaining informed consent\b", procedure_type, re.I):
         procedure_type = ""
 
+    # Extend as other clinics start sending reports.
     location = "Not documented"
     if re.search(r"Tennyson Centre\s+Day Hospital", endo_text, re.I):
         location = "Tennyson Centre Day Hospital"
@@ -236,7 +263,7 @@ def extract_pdf_provider_override(endo_text: str) -> str:
 
     Some PDF reports list an anaesthetist first in "Providers:" and the
     endoscopist second or in the footer signature. This keeps the Excel-derived
-    v11 provider logic untouched while improving PDF-only report handling.
+    provider logic untouched while improving PDF-only report handling.
     """
     text = normalize_report_text(endo_text)
 
@@ -264,7 +291,11 @@ def extract_pdf_provider_override(endo_text: str) -> str:
 
 
 def extract_pdf_endoscopy_findings(endo_text: str):
-    """Extract findings from PDF reports while preserving bullet boundaries."""
+    """Extract findings from PDF reports while preserving bullet boundaries.
+
+    Note: this is a different code path from the Excel route, so row counts from
+    PDF-derived reports are not directly comparable with Excel-derived ones.
+    """
     text = normalize_report_text(endo_text)
     m = re.search(
         r"Findings?\s*:\s*(.*?)(?=\n?\s*(?:Impression|Recommendation|Scope Withdrawal Time|Images)\s*:|$)",
@@ -285,8 +316,8 @@ def extract_pdf_endoscopy_findings(endo_text: str):
 
     rows = []
     for block in bullet_blocks:
-        # Run the stable v11 extractor per bullet so neighbouring PDF bullet
-        # findings do not donate count/size/site details to each other.
+        # Run the extractor per bullet so neighbouring PDF bullet findings do
+        # not donate count/size/site details to each other.
         rows.extend(extract_endoscopy_findings(f"Findings:\n- {block}\nImpression:"))
 
     return rows or extract_endoscopy_findings(text)
@@ -297,7 +328,7 @@ def build_rows_from_report(
     pathology_report_text: str,
     metadata: dict,
 ) -> tuple[list[dict], list[dict], list[dict]]:
-    """Run the v11 extractor on one PDF-derived report."""
+    """Run the extraction stages on one PDF-derived report."""
     endo = normalize_report_text(endoscopy_report_text)
     path = normalize_report_text(pathology_report_text)
 
@@ -355,12 +386,10 @@ def build_rows_from_report(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="v1 PDF endoscopy/pathology report extraction wrapper for pipeline_v11_spacy_fixed.py"
+        description="PDF endoscopy/pathology report extraction wrapper for the modular NLP pipeline"
     )
-    parser.add_argument("--endoscopy-pdf", default="Test pdf.pdf", help="Endoscopy report PDF path")
-    parser.add_argument("--pathology-pdf", default="", help="Optional pathology report PDF path")
-    parser.add_argument("--endoscopy-text-file", default="", help="Optional pre-OCR endoscopy text file")
-    parser.add_argument("--pathology-text-file", default="", help="Optional pre-OCR pathology text file")
+    parser.add_argument("--endoscopy-pdf", required=True, help="Report PDF path")
+    parser.add_argument("--endoscopy-text-file", default="", help="Optional pre-OCR text file (skips OCR)")
     parser.add_argument("--output", default=DEFAULT_OUTPUT, help="Output Excel workbook path")
     parser.add_argument("--procedure-id", default="", help="Optional procedure_id override")
     parser.add_argument("--force-ocr", action="store_true", help="Force OCR even when embedded PDF text exists")
@@ -368,7 +397,8 @@ def main() -> None:
     parser.add_argument("--pdftoppm", default="", help="Optional explicit path to pdftoppm")
     parser.add_argument("--ocr-dpi", type=int, default=300, help="OCR render DPI")
     parser.add_argument("--ocr-lang", default="eng", help="Tesseract OCR language")
-    parser.add_argument("--save-extracted-text", default="", help="Optional path to save extracted PDF text")
+    parser.add_argument("--ocr-psm", default="6", help="Tesseract page segmentation mode (6 single-column, 3 auto)")
+    parser.add_argument("--save-extracted-text", default="", help="Path to save extracted text (default: beside the workbook)")
     args = parser.parse_args()
 
     endoscopy_pdf = Path(args.endoscopy_pdf).expanduser().resolve()
@@ -384,35 +414,33 @@ def main() -> None:
                 pdftoppm_path=args.pdftoppm or None,
                 ocr_dpi=args.ocr_dpi,
                 ocr_lang=args.ocr_lang,
+                ocr_psm=args.ocr_psm,
             )
 
-        pathology_text = read_text_file(args.pathology_text_file)
-        pathology_method = "none"
-        if args.pathology_pdf and not pathology_text:
-            pathology_text, pathology_method = extract_pdf_text(
-                args.pathology_pdf,
-                force_ocr=args.force_ocr,
-                tesseract_path=args.tesseract or None,
-                pdftoppm_path=args.pdftoppm or None,
-                ocr_dpi=args.ocr_dpi,
-                ocr_lang=args.ocr_lang,
-            )
-        elif pathology_text:
-            pathology_method = "text_file"
+        # Endoscopy and pathology always arrive in the same PDF.
+        pathology_text = endoscopy_text
+        pathology_method = f"{endoscopy_method} (same file)"
     except PdfTextExtractionError as exc:
         print(f"PDF text extraction failed: {exc}", file=sys.stderr)
         print(
-            "For scanned PDFs on macOS, install OCR with: brew install tesseract poppler",
+            "Install OCR tools: Tesseract and Poppler must be on PATH.",
             file=sys.stderr,
         )
         sys.exit(2)
 
+    # Always keep the extracted text: with OCR in the chain it is the only
+    # record of what the pipeline actually read.
+    combined = (
+        f"--- ENDOSCOPY TEXT ({endoscopy_method}) ---\n{endoscopy_text}\n\n"
+        f"--- PATHOLOGY TEXT ({pathology_method}) ---\n{pathology_text}\n"
+    )
     if args.save_extracted_text:
-        combined = (
-            f"--- ENDOSCOPY TEXT ({endoscopy_method}) ---\n{endoscopy_text}\n\n"
-            f"--- PATHOLOGY TEXT ({pathology_method}) ---\n{pathology_text}\n"
-        )
-        Path(args.save_extracted_text).expanduser().write_text(combined, encoding="utf-8")
+        text_path = Path(args.save_extracted_text).expanduser()
+    else:
+        out = Path(args.output)
+        text_path = out.with_name(out.name + ".source.txt")
+    text_path.parent.mkdir(parents=True, exist_ok=True)
+    text_path.write_text(combined, encoding="utf-8")
 
     metadata = extract_pdf_metadata(endoscopy_text, endoscopy_pdf, args.procedure_id)
     proc_rows, finding_rows, indication_rows = build_rows_from_report(
@@ -420,6 +448,8 @@ def main() -> None:
         pathology_text,
         metadata,
     )
+
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     build_excel_multi(proc_rows, finding_rows, args.output, indication_rows)
 
     print(f"Endoscopy text method: {endoscopy_method}")
@@ -427,6 +457,7 @@ def main() -> None:
     print(f"Procedure rows        : {len(proc_rows)}")
     print(f"Finding rows          : {len(finding_rows)}")
     print(f"Indication rows       : {len(indication_rows)}")
+    print(f"Extracted text        : {text_path}")
     print(f"Output                : {args.output}")
 
 
