@@ -55,16 +55,17 @@ The Poppler PATH entry contains the version number, so it breaks on upgrade.
 A folder of PDFs:
 
     cd C:\Users\tallen09\PycharmProjects\modifcations_nlp
-    python pdf_text.py "data\input\pdf"
+    python pdf_ingest.py "data\input\pdf"
 
 A single PDF:
 
-    python pdf_text.py "data\input\pdf\208903600200.pdf"
+    python pdf_ingest.py "data\input\pdf\208903600200.pdf"
 
 With explicit OCR paths, when PATH is not set up:
 
-    python pdf_text.py "data\input\pdf" --tesseract "<path>\tesseract.exe" --pdftoppm "<path>\Library\bin\pdftoppm.exe"
+    python pdf_ingest.py "data\input\pdf" --tesseract "<path>\tesseract.exe" --pdftoppm "<path>\Library\bin\pdftoppm.exe"
 
+File paths for input and the script are dependent on the local environment
 ### Flags
 
 | Flag | Purpose |
