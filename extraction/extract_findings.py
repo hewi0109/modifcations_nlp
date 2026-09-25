@@ -87,25 +87,25 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
         flags=re.I
     )
     findings_text = re.sub(
-        r',\s+and\s+(?=(?:a|an)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\s+polyp\b)',
+        r',\s+and\s+(?=(?:a|an|another)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\s+polyp\b)',
         '\n',
         findings_text,
         flags=re.I
     )
     findings_text = re.sub(
-        r'\s+(?=(?:A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\s+polyp\b)',
+        r'\s+(?=(?:A|An|Another)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\s+polyp\b)',
         '\n',
         findings_text,
         flags=re.I
     )
     findings_text = re.sub(
-        r'\s+(?=(?:A|An)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}polyp\b)',
+        r'\s+(?=(?:A|An|Another)\s+\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}polyp\b)',
         '\n',
         findings_text,
         flags=re.I
     )
     findings_text = re.sub(
-        r'\s+(?=(?:A|An)\s+(?:small|large|tiny|diminutive)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}polyp\b)',
+        r'\s+(?=(?:A|An|Another)\s+(?:small|large|tiny|diminutive)\s+\(?\d+(?:\s*(?:to|-)\s*\d+)?\s*mm\)?\s+(?:(?:inflam+ed|sessile|flat|pedunculated|semi-?sessile|semi-?pedunculated)\s+){0,4}polyp\b)',
         '\n',
         findings_text,
         flags=re.I
