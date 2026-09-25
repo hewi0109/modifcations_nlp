@@ -367,7 +367,6 @@ def apply_upper_gi_overrides_to_finding(row: dict) -> dict:
     # clearly indicate that this is not a colorectal extraction target.
     for key in [
         "finding_morphology",
-        "number_categorical",
         "size_mm",
         "finding_intervention_performed",
         "finding_intervention_completeness",
@@ -379,6 +378,7 @@ def apply_upper_gi_overrides_to_finding(row: dict) -> dict:
     row["manual_curation"] = "Yes"
     row["curation_reason"] = upper_msg
     row["extraction_discrepancy_flag"] = "Yes"
+    row["number_categorical"] = ""
     return row
 
 
