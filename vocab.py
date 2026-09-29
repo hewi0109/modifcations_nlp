@@ -60,7 +60,7 @@ INTERVENTION_VOCAB = [
 ]
 
 INTERVENTION_COMPLETENESS_VOCAB = [
-    "Complete", "Incomplete", "Not clear", "Not reported", "Not retrieved"
+    "Complete", "Incomplete", "Not clear", "Not reported", "Not retrieved", "N/A"
 ]
 
 DIAGNOSIS_GROUP_VOCAB = [

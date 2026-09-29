@@ -308,7 +308,7 @@ def extract_endoscopy_findings(note: str) -> list[EndoscopyFinding]:
         elif interv_norm == "Biopsy only":
             comp_norm = "Not retrieved"
         elif interv_norm == "Not excised":
-            comp_norm = "Not retrieved"
+            comp_norm = "N/A"
         elif interv_norm == "Not documented":
             comp_norm = "Not retrieved"
         else:

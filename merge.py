@@ -488,6 +488,9 @@ def _append_row(
     if path_matched and completeness == "Not retrieved":
         completeness = "Complete"
 
+    if intervention_performed == "Not excised" and completeness == "Not documented":
+        completeness = "N/A"
+
     # A finding cannot logically be both "Not excised" and "Complete" --
     # this combination is almost always caused by two distinct findings
     # merging into one text block during extraction. Checked against the

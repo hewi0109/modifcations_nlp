@@ -133,7 +133,7 @@ def extract_intervention_raw(text: str) -> str:
 def extract_completeness_raw(text: str) -> str:
     t = text.lower()
     if re.search(r'polypectomy\s+was\s+not\s+attempted|no\s+(?:biopsies|specimens).*collected|no\s+biopsies\s+or\s+other\s+specimens', t):
-        return "Not retrieved"
+        return "N/A"
     if re.search(r'not retrieved\b', t):
         return "Not retrieved"
     if re.search(r'resection and retrieval were complete|complete resection|retrieved.*complete', t):
